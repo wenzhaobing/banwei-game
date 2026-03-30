@@ -1,0 +1,20 @@
+{
+    "name": "班味清除计划",
+    "short_name": "班味清除",
+    "description": "打工人摸鱼文字游戏 - 通过荒诞的职场选项宣泄压力",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#2c3e2f",
+    "theme_color": "#2c3e2f",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["games", "entertainment"],
+    "lang": "zh-CN"
+}

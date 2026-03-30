@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#2c3e2f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="班味清除计划 - 打工人摸鱼文字游戏">
+    <title>班味清除计划 - 打工人摸鱼模拟器</title>
+
+    <!-- CSS样式 -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/animations.css">
+
+    <!-- PWA配置 -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- 图标 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
+</head>
+<body>
+    <!-- 游戏主容器 -->
+    <div class="game-container" id="gameContainer">
+        <!-- 状态栏 -->
+        <div class="stats-panel">
+            <div class="stat-item">
+                <div class="stat-header">
+                    <span class="stat-label">
+                        <span class="stat-emoji">💖</span>
+                        <span>理智值</span>
+                    </span>
+                    <span class="stat-value" id="sanityValue">100</span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div class="stat-bar-fill sanity-fill" id="sanityBar"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-header">
+                    <span class="stat-label">
+                        <span class="stat-emoji">😫</span>
+                        <span>压力值</span>
+                    </span>
+                    <span class="stat-value" id="stressValue">0</span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div class="stat-bar-fill stress-fill" id="stressBar"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-header">
+                    <span class="stat-label">
+                        <span class="stat-emoji">💰</span>
+                        <span>存款</span>
+                    </span>
+                    <span class="stat-value" id="moneyValue">500</span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div class="stat-bar-fill money-fill" id="moneyBar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 事件卡片 -->
+        <div class="event-card">
+            <div class="event-title">📢 今日事件</div>
+            <div class="event-desc" id="eventDesc">加载中...</div>
+            <div class="options" id="optionsContainer"></div>
+            <div class="feedback-area" id="feedbackArea">
+                <span>💡</span>
+                <span>点击选项，开始你的摸鱼人生</span>
+            </div>
+        </div>
+
+        <!-- 底部导航 -->
+        <div class="bottom-nav">
+            <button class="nav-btn" id="fortuneBtn">
+                <span class="nav-emoji">📅</span>
+                <span>今日运势</span>
+            </button>
+            <button class="nav-btn" id="achievementBtn">
+                <span class="nav-emoji">🏆</span>
+                <span>成就墙</span>
+            </button>
+            <button class="nav-btn" id="resetBtn">
+                <span class="nav-emoji">🔄</span>
+                <span>重开人生</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 今日运势弹窗 -->
+    <div id="fortuneModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>📅 今日运势</span>
+                <button class="close-modal" id="closeFortuneBtn">✕</button>
+            </div>
+            <div class="modal-body fortune-content" id="fortuneContent"></div>
+        </div>
+    </div>
+
+    <!-- 成就墙弹窗 -->
+    <div id="achievementModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>🏆 成就墙</span>
+                <button class="close-modal" id="closeAchievementBtn">✕</button>
+            </div>
+            <div class="modal-body" id="achievementContent"></div>
+        </div>
+    </div>
+
+    <!-- 确认重开弹窗 -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>⚠️ 确认重开</span>
+                <button class="close-modal" id="closeConfirmBtn">✕</button>
+            </div>
+            <div class="modal-body confirm-content">
+                <div class="confirm-icon">🔄</div>
+                <div class="confirm-text">重新开始会丢失当前进度，确定要重开吗？</div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn confirm-btn-cancel" id="confirmCancelBtn">取消</button>
+                    <button class="confirm-btn confirm-btn-ok" id="confirmOkBtn">确定重开</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成就解锁提示 -->
+    <div id="toastUnlock" class="toast-unlock">🎉 解锁新成就</div>
+
+    <!-- 主程序入口 -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
