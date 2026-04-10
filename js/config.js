@@ -8,9 +8,9 @@ export const CONFIG = {
     MAX_MONEY: 1000,
 
     // 初始数值
-    INIT_SANITY: 100,
-    INIT_STRESS: 0,
-    INIT_MONEY: 500,
+    INIT_SANITY: 80,
+    INIT_STRESS: 20,
+    INIT_MONEY: 600,
 
     // 离线收益配置
     OFFLINE_HOUR_LIMIT: 8,
@@ -21,5 +21,11 @@ export const CONFIG = {
     // 警告阈值
     SANITY_WARNING: 30,
     STRESS_WARNING: 70,
-    ZEN_MASTER_THRESHOLD: 80
+    ZEN_MASTER_THRESHOLD: 80,
+
+    // 结局触发条件
+    ENDING_SANITY_ZERO: 0,
+    ENDING_SANITY_MAX: 200,
+    ENDING_STRESS_MAX: 100,
+    ENDING_MONEY_ZERO: 0
 };

@@ -24,6 +24,67 @@
     width: 100%;
 }
 
+.fortune-btn{
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 20px;
+}
+
+.fortune-btn:hover {
+    border-color: var(--text-secondary);
+}
+
+/* 运势提示 */
+.fortune-note {
+    font-size: 11px;
+    color: #b8a890;
+    margin-top: 28px;
+    width: 100%;
+    text-align: center;
+}
+
+/* 主按钮 - 弹跳效果 */
+.btn-primary-bounce {
+    padding: 14px 20px;
+    font-size: 16px;
+    width: 100%;
+    background: linear-gradient(135deg, #9bbf8a, #7c9e6e);
+    border: none;
+    padding: 16px 24px;
+    border-radius: 60px;
+    font-size: 18px;
+    font-weight: bold;
+    font-family: inherit;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    animation: gentlePulse 2s ease-in-out infinite;
+    box-shadow: 0 4px 12px rgba(124, 158, 110, 0.4);
+    transition: transform 0.1s ease;
+}
+
+@keyframes gentlePulse {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(124, 158, 110, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 6px 20px rgba(124, 158, 110, 0.6);
+        transform: scale(1.01);
+    }
+}
+
+.btn-primary-bounce:active {
+    transform: scale(0.98);
+    animation: none;
+}
+
 .buff-badge {
     padding: 10px 20px;
     background: linear-gradient(135deg, rgba(124, 158, 110, 0.2) 0%, rgba(155, 191, 138, 0.2) 100%);

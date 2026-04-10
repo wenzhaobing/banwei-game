@@ -25,29 +25,36 @@
 body {
     background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
     font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', monospace;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
 }
 
 .game-container {
     max-width: 500px;
     width: 100%;
+    height: 100vh;
+    height: 100dvh;
     background: var(--container-bg);
-    border-radius: 32px;
+    border-radius: 0;
     box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    animation: fadeIn 0.5s ease;
 }
 
 .stats-panel {
+    flex-shrink: 0;
     background: var(--panel-bg);
-    padding: 20px;
+    padding: 16px 20px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     border-bottom: 2px solid var(--border-color);
 }
 
@@ -81,6 +88,13 @@ body {
     font-weight: bold;
     color: var(--text-primary);
     font-family: 'Monaco', 'Consolas', monospace;
+    transition: all 0.3s ease;
+}
+
+.stat-value.stat-highlight {
+    transform: scale(1.3);
+    text-shadow: 0 0 12px rgba(124, 158, 110, 0.8), 0 0 24px rgba(124, 158, 110, 0.4);
+    color: #5a8a4a;
 }
 
 .stat-bar-bg {
@@ -111,100 +125,219 @@ body {
     width: 50%;
 }
 
+/* ============ 事件卡片 - 突出样式 ============ */
+
 .event-card {
-    padding: 24px;
-    min-height: 280px;
+    flex: 1;
+    background: linear-gradient(135deg, #ffffff 0%, #fef9f0 100%);
+    margin: 12px;
+    padding: 16px;
+    border-radius: 24px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08), 0 0 0 1px rgba(124, 158, 110, 0.15);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
+/* 装饰性光晕效果 */
+.event-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(124, 158, 110, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    animation: rotateGlow 20s linear infinite;
+}
+
+@keyframes rotateGlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 事件标题 */
 .event-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: var(--text-primary);
-    margin-bottom: 16px;
+    flex-shrink: 0;
+    font-size: 22px;
     text-align: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e8dccc;
+    position: relative;
+    width: 100%;
 }
 
+.event-title::after {
+    content: '⚡';
+    position: absolute;
+    right: 15%;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+    animation: pulse 2s ease infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: translateY(-50%) scale(1); }
+    50% { opacity: 0.8; transform: translateY(-50%) scale(1.1); }
+}
+
+/* 事件描述 - 核心突出区域 */
 .event-desc {
-    font-size: 16px;
-    color: var(--text-secondary);
-    line-height: 1.6;
+    flex-shrink: 0;
+    font-size: 18px;
+    line-height: 1.5;
     text-align: center;
-    margin-bottom: 20px;
-    min-height: 50px;
-}
-
-.options {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    flex: 1;
-}
-
-.option-btn {
-    background: var(--card-bg);
-    border: 2px solid var(--border-color);
-    border-radius: 16px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-
-.option-btn:hover {
-    border-color: var(--success-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-.option-btn:active {
-    transform: scale(0.98);
-}
-
-.option-emoji {
-    font-size: 24px;
-    width: 36px;
-    text-align: center;
-}
-
-.option-text {
-    flex: 1;
-    font-size: 15px;
-    color: var(--text-primary);
-    text-align: left;
-    font-weight: 500;
-}
-
-.option-effect {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-family: 'Monaco', 'Consolas', monospace;
-    white-space: nowrap;
-}
-
-.feedback-area {
-    margin-top: 16px;
-    padding: 12px;
-    background: var(--panel-bg);
-    border-radius: 12px;
+    color: #3a2c1f;
+    margin-bottom: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #fff9f0, #fff5e8);
+    border-radius: 18px;
+    min-height: 90px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    min-height: 44px;
+    border: 2px solid #e8dccc;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02), 0 4px 12px rgba(0,0,0,0.05);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+/* 描述文字前的装饰 */
+.event-desc::before {
+    content: '"';
+    font-size: 36px;
+    color: #7c9e6e;
+    opacity: 0.3;
+    position: absolute;
+    left: 10px;
+    top: 6px;
+    font-family: serif;
+}
+
+.event-desc::after {
+    content: '"';
+    font-size: 36px;
+    color: #7c9e6e;
+    opacity: 0.3;
+    position: absolute;
+    right: 10px;
+    bottom: 6px;
+    font-family: serif;
+}
+
+/* 选项按钮 - 更突出的样式 */
+.options {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 4px;
+    counter-reset: option-counter;
+}
+
+.option-btn {
+    background: linear-gradient(135deg, #fef9f0 0%, #fff5e6 100%);
+    border: 2px solid #e0d0b8;
+    color: #5a4a3a;
+    padding: 16px 20px;
+    font-size: 16px;
+    font-family: inherit;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    margin-left: 0;
+}
+
+/* 按钮序号装饰 */
+.option-btn::before {
+    content: counter(option-counter);
+    counter-increment: option-counter;
+    font-size: 20px;
+    font-weight: bold;
+    color: #7c9e6e;
+    opacity: 0.5;
+    min-width: 32px;
     text-align: center;
 }
 
+/* 按钮悬停效果 */
+.option-btn:hover {
+    transform: scale(1.02);
+    border-color: #7c9e6e;
+    box-shadow: 0 6px 16px rgba(124, 158, 110, 0.25);
+    background: linear-gradient(135deg, #fff9ef, #fff8e6);
+    z-index: 1;
+}
+
+/* 按钮点击效果 */
+.option-btn:active {
+    transform: scale(0.98);
+    transition: 0.05s;
+}
+
+/* 选项图标 */
+.option-emoji {
+    font-size: 32px;
+    min-width: 56px;
+    text-align: center;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+/* 选项文字 */
+.option-text {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 反馈区域 - 更突出 */
+.feedback-area {
+    flex-shrink: 0;
+    margin-top: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f0e8dc, #e8dfd0);
+    border-radius: 16px;
+    font-size: 13px;
+    color: #7c6b54;
+    text-align: center;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid #d8c8b0;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+/* 反馈区域图标动画 */
+.feedback-area span:first-child {
+    font-size: 20px;
+    animation: bounce 0.5s ease;
+}
+
 .bottom-nav {
+    flex-shrink: 0;
     display: flex;
     justify-content: space-around;
-    padding: 16px;
+    padding: 12px;
     background: var(--panel-bg);
     border-top: 2px solid var(--border-color);
 }
@@ -319,22 +452,21 @@ body {
 }
 
 .number-popup {
-    position: fixed;
+    position: absolute;
     pointer-events: none;
-    font-size: 20px;
+    font-size: 16px;
     font-weight: bold;
     font-family: 'Monaco', 'Consolas', monospace;
     z-index: 1500;
-    animation: popFloat 1s ease forwards;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .number-popup.positive {
-    color: var(--success-color);
+    color: #5a8a4a;
 }
 
 .number-popup.negative {
-    color: var(--warning-color);
+    color: #c75050;
 }
 
 .ending-overlay {
@@ -430,19 +562,49 @@ body {
 }
 
 @media (max-width: 480px) {
-    body {
-        padding: 12px;
-    }
-
     .game-container {
-        border-radius: 24px;
+        border-radius: 0;
     }
 
     .event-card {
-        padding: 16px;
+        margin: 8px;
+        padding: 12px;
+    }
+
+    .event-title {
+        font-size: 20px;
+    }
+
+    .event-desc {
+        font-size: 16px;
+        padding: 14px;
+        min-height: 80px;
+    }
+
+    .event-desc::before,
+    .event-desc::after {
+        font-size: 28px;
     }
 
     .option-btn {
-        padding: 12px;
+        padding: 12px 14px;
+    }
+
+    .option-emoji {
+        font-size: 26px;
+        min-width: 44px;
+    }
+
+    .option-text {
+        font-size: 14px;
+    }
+
+    .bottom-nav {
+        padding: 10px;
+    }
+
+    .nav-btn {
+        padding: 6px 12px;
+        font-size: 11px;
     }
 }

@@ -76,7 +76,7 @@
 | 原生 JavaScript (ES6+) | 游戏逻辑  |
 | LocalStorage         | 本地存档  |
 | PWA                  | 离线访问  |
-| Vercel               | 免费部署  |
+| Netlify             | 免费部署  |
 
 ### 3.2 项目结构
 
@@ -85,7 +85,7 @@ banwei-game/
 ├── index.html                 # 主入口文件
 ├── manifest.json              # PWA配置
 ├── sw.js                      # Service Worker
-├── vercel.json                # Vercel部署配置
+├── vercel.json                # 部署配置 (Netlify)
 ├── README.md                  # 项目说明
 ├── css/
 │   ├── main.css               # 全局样式和变量
@@ -805,7 +805,7 @@ export function showEnding(endingType, onRestart) {
 
 ## 🚀 五、部署指南
 
-### 5.1 Vercel部署步骤
+### 5.1 Netlify部署步骤
 
 1. **创建GitHub仓库**
 
@@ -817,29 +817,28 @@ git remote add origin https://github.com/你的用户名/banwei-game.git
 git push -u origin main
 ```
 
-1. **在Vercel部署**
+1. **在Netlify部署**
 
-- 访问 <https://vercel.com>
-- 点击「New Project」
-- 导入GitHub仓库
-- 保持默认配置，点击「Deploy」
+- 访问 <https://app.netlify.com>
+- 点击「Add new site」→「Import an existing project」
+- 选择GitHub，导入你的仓库
+- 保持默认配置，点击「Deploy site」
 
 1. **获取访问链接**
 
-- 部署完成后获得 `https://项目名.vercel.app`
+- 部署完成后获得 `https://项目名.netlify.app`
 
-### 5.2 vercel.json配置
+### 5.2 Netlify配置文件 (netlify.toml)
 
-```json
-{
-  "name": "banwei-game",
-  "version": 2,
-  "builds": [
-    { "src": "*.html", "use": "@vercel/static" },
-    { "src": "css/*.css", "use": "@vercel/static" },
-    { "src": "js/*.js", "use": "@vercel/static" }
-  ]
-}
+```toml
+[build]
+  publish = "/"
+  command = ""
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 ```
 
 ***

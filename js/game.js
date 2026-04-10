@@ -40,7 +40,9 @@ export let gameState = {
         stressMultiplier: 1.0,
         moneyMultiplier: 1.0,
         slackBonus: 1.0,
-        backstabPenalty: 1.0
+        backstabPenalty: 1.0,
+        coffeeBonus: 1.0,
+        randomizeEffects: false,
     }
 };
 
@@ -56,6 +58,57 @@ export function clamp(value, min, max) {
 }
 
 /**
+ * 应用运势修正到效果数值
+ * @param {object} effects - 原始效果 { sanity, stress, money }
+ * @param {string[]} tags - 事件标签
+ * @returns {object} 修正后的效果
+ */
+function applyModifier(effects, tags) {
+    const result = { ...effects };
+    const mod = gameState.fortuneModifier;
+
+    // 1. 随机化效果（优先级最高）
+    if (mod.randomizeEffects) {
+        const randomFactor = () => 0.5 + Math.random() * 0.5;
+        result.sanity = Math.floor(result.sanity * randomFactor());
+        result.stress = Math.floor(result.stress * randomFactor());
+        result.money = Math.floor(result.money * randomFactor());
+        return result;
+    }
+
+    // 2. 应用标签专属加成
+    if (tags.includes('slack_off') && mod.slackBonus !== 1.0) {
+        result.sanity = Math.floor(result.sanity * mod.slackBonus);
+        result.stress = Math.floor(result.stress * mod.slackBonus);
+        result.money = Math.floor(result.money * mod.slackBonus);
+    }
+
+    if (tags.includes('backstab') && mod.backstabPenalty !== 1.0) {
+        result.sanity = Math.floor(result.sanity * mod.backstabPenalty);
+        result.stress = Math.floor(result.stress * mod.backstabPenalty);
+        result.money = Math.floor(result.money * mod.backstabPenalty);
+    }
+
+    if (tags.includes('coffee') && mod.coffeeBonus !== 1.0) {
+        result.sanity = Math.floor(result.sanity * mod.coffeeBonus);
+        result.stress = Math.floor(result.stress * mod.coffeeBonus);
+    }
+
+    // 3. 应用全局倍率
+    if (mod.sanityMultiplier !== 1.0) {
+        result.sanity = Math.floor(result.sanity * mod.sanityMultiplier);
+    }
+    if (mod.stressMultiplier !== 1.0) {
+        result.stress = Math.floor(result.stress * mod.stressMultiplier);
+    }
+    if (mod.moneyMultiplier !== 1.0) {
+        result.money = Math.floor(result.money * mod.moneyMultiplier);
+    }
+
+    return result;
+}
+
+/**
  * 更新数值
  * @param {number} sanityDelta - 理智变化值
  * @param {number} stressDelta - 压力变化值
@@ -65,14 +118,12 @@ export function clamp(value, min, max) {
  */
 export function updateStats(sanityDelta, stressDelta, moneyDelta, tags = []) {
     // 应用运势修正
-    const modifiedSanity = Math.round(sanityDelta * gameState.fortuneModifier.sanityMultiplier);
-    const modifiedStress = Math.round(stressDelta * gameState.fortuneModifier.stressMultiplier);
-    const modifiedMoney = Math.round(moneyDelta * gameState.fortuneModifier.moneyMultiplier);
+    const modified = applyModifier({ sanity: sanityDelta, stress: stressDelta, money: moneyDelta }, tags);
 
     // 更新数值
-    gameState.sanity = clamp(gameState.sanity + modifiedSanity, 0, gameState.maxSanity);
-    gameState.stress = clamp(gameState.stress + modifiedStress, 0, gameState.maxStress);
-    gameState.money = clamp(gameState.money + modifiedMoney, 0, gameState.maxMoney);
+    gameState.sanity = clamp(gameState.sanity + modified.sanity, 0, gameState.maxSanity);
+    gameState.stress = clamp(gameState.stress + modified.stress, 0, gameState.maxStress);
+    gameState.money = clamp(gameState.money + modified.money, 0, gameState.maxMoney);
 
     // 更新历史最高压力
     if (gameState.stress > gameState.maxStressEver) {
@@ -87,12 +138,12 @@ export function updateStats(sanityDelta, stressDelta, moneyDelta, tags = []) {
     });
 
     // 应用成就奖励
-    applyAchievementRewards(modifiedSanity, modifiedStress, modifiedMoney, tags);
+    applyAchievementRewards(modified.sanity, modified.stress, modified.money, tags);
 
     return {
-        sanity: modifiedSanity,
-        stress: modifiedStress,
-        money: modifiedMoney
+        sanity: modified.sanity,
+        stress: modified.stress,
+        money: modified.money
     };
 }
 
@@ -133,10 +184,10 @@ function applyAchievementRewards(sanityDelta, stressDelta, moneyDelta, tags) {
  * @returns {string|null} 结局类型
  */
 export function checkEnding() {
-    if (gameState.sanity <= 0) return 'sanity_zero';
-    if (gameState.money <= 0) return 'money_zero';
-    if (gameState.stress >= gameState.maxStress) return 'stress_max';
-    if (gameState.sanity >= gameState.maxSanity) return 'sanity_max';
+    if (gameState.sanity <= CONFIG.ENDING_SANITY_ZERO) return 'sanity_zero';
+    if (gameState.money <= CONFIG.ENDING_MONEY_ZERO) return 'money_zero';
+    if (gameState.stress >= CONFIG.ENDING_STRESS_MAX) return 'stress_max';
+    if (gameState.sanity >= CONFIG.ENDING_SANITY_MAX) return 'sanity_max';
     return null;
 }
 
@@ -169,7 +220,9 @@ export function resetGameState() {
             stressMultiplier: 1.0,
             moneyMultiplier: 1.0,
             slackBonus: 1.0,
-            backstabPenalty: 1.0
+            backstabPenalty: 1.0,
+            coffeeBonus: 1.0,
+            randomizeEffects: false,
         }
     };
     return gameState;

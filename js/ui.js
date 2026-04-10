@@ -4,17 +4,53 @@
 import { gameState } from './game.js';
 
 /**
+ * 数值滚动动画
+ * @param {HTMLElement} element - 要更新的元素
+ * @param {number} start - 起始值
+ * @param {number} end - 结束值
+ * @param {number} duration - 动画时长(ms)
+ * @param {string} suffix - 后缀文本
+ */
+function animateValue(element, start, end, duration, suffix = '') {
+    const startTime = performance.now();
+    const diff = end - start;
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + diff * easeProgress);
+        element.textContent = `${current}${suffix}`;
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
+/**
  * 更新状态栏UI
  * @param {object} state - 游戏状态
+ * @param {boolean} animate - 是否播放动画
  */
-export function updateStatsUI(state = gameState) {
-    // 确保压力值不为负数（显示时保护）
+export function updateStatsUI(state = gameState, animate = true) {
     const displayStress = Math.max(0, state.stress);
 
-    // 更新数值显示（格式：当前值/最大值）
-    document.getElementById('sanityValue').textContent = `${state.sanity}/${state.maxSanity}`;
-    document.getElementById('stressValue').textContent = `${displayStress}/${state.maxStress}`;
-    document.getElementById('moneyValue').textContent = `${state.money}/${state.maxMoney}`;
+    if (animate) {
+        const oldSanity = parseInt(document.getElementById('sanityValue').textContent.split('/')[0]) || 0;
+        const oldStress = parseInt(document.getElementById('stressValue').textContent.split('/')[0]) || 0;
+        const oldMoney = parseInt(document.getElementById('moneyValue').textContent.split('/')[0]) || 0;
+
+        animateValue(document.getElementById('sanityValue'), oldSanity, state.sanity, 400, `/${state.maxSanity}`);
+        animateValue(document.getElementById('stressValue'), oldStress, displayStress, 400, `/${state.maxStress}`);
+        animateValue(document.getElementById('moneyValue'), oldMoney, state.money, 400, `/${state.maxMoney}`);
+    } else {
+        document.getElementById('sanityValue').textContent = `${state.sanity}/${state.maxSanity}`;
+        document.getElementById('stressValue').textContent = `${displayStress}/${state.maxStress}`;
+        document.getElementById('moneyValue').textContent = `${state.money}/${state.maxMoney}`;
+    }
 
     // 更新进度条
     const sanityPercent = (state.sanity / state.maxSanity) * 100;
@@ -43,26 +79,75 @@ export function updateStatsUI(state = gameState) {
 }
 
 /**
- * 显示数值变化浮动动画
- * @param {number} value - 变化值
- * @param {number} x - X坐标
- * @param {number} y - Y坐标
+ * 显示数值飘起动画 - 飘向对应状态栏并高亮
+ * @param {number} value - 数值变化
+ * @param {number} x - X坐标（按钮中心）
+ * @param {number} y - Y坐标（按钮顶部）
+ * @param {string} statType - 属性类型 (sanity/stress/money)
  */
-export function showNumberPop(value, x, y) {
+export function showNumberPop(value, x, y, statType) {
+    let targetId;
+    if (statType === 'sanity') {
+        targetId = 'sanityValue';
+    } else if (statType === 'stress') {
+        targetId = 'stressValue';
+    } else if (statType === 'money') {
+        targetId = 'moneyValue';
+    } else {
+        return;
+    }
+    
+    const targetEl = document.getElementById(targetId);
+    if (!targetEl) return;
+
+    const rect = targetEl.getBoundingClientRect();
+    const targetX = rect.left + rect.width / 2;
+    const targetY = rect.top + rect.height / 2;
+
     const popup = document.createElement('div');
     popup.className = `number-popup ${value >= 0 ? 'positive' : 'negative'}`;
-    popup.textContent = value >= 0 ? `+${value}` : value;
 
-    // 设置位置
+    const icon = statType === 'sanity' ? '💖' : statType === 'stress' ? '😫' : '💰';
+    popup.textContent = `${value >= 0 ? '+' : ''}${value}${icon}`;
+
+    popup.style.position = 'fixed';
+    popup.style.zIndex = '9999';
+    popup.style.pointerEvents = 'none';
     popup.style.left = `${x}px`;
     popup.style.top = `${y}px`;
+    popup.style.transform = 'translate(-50%, -100%)';
+    popup.style.opacity = '1';
+    popup.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 
     document.body.appendChild(popup);
 
-    // 动画结束后移除
+    requestAnimationFrame(() => {
+        popup.style.left = `${targetX}px`;
+        popup.style.top = `${targetY}px`;
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.opacity = '0';
+    });
+
     setTimeout(() => {
         popup.remove();
-    }, 1000);
+        highlightStatItem(statType);
+    }, 600);
+}
+
+/**
+ * 高亮状态栏条目 - 冲击效果
+ * @param {string} statType - 属性类型
+ */
+function highlightStatItem(statType) {
+    const valueEl = document.getElementById(
+        statType === 'sanity' ? 'sanityValue' : statType === 'stress' ? 'stressValue' : 'moneyValue'
+    );
+    if (!valueEl) return;
+
+    valueEl.classList.add('stat-highlight');
+    setTimeout(() => {
+        valueEl.classList.remove('stat-highlight');
+    }, 300);
 }
 
 /**
@@ -72,7 +157,8 @@ export function showNumberPop(value, x, y) {
  */
 export function setFeedback(feedbackText, changes) {
     const feedbackDiv = document.getElementById('feedbackArea');
-    feedbackDiv.innerHTML = `<span>✨</span><span>${feedbackText}</span><span>${changes}</span>`;
+    const changesHtml = changes ? `<span>${changes}</span>` : '';
+    feedbackDiv.innerHTML = `<span>✨</span><span>${feedbackText}</span>${changesHtml}`;
 }
 
 /**

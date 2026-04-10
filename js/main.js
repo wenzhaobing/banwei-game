@@ -3,17 +3,42 @@
  */
 import { gameState, updateStats, checkEnding, resetGameState } from './game.js';
 import { events } from './events.js';
-import { saveGame, loadGame, applyOfflineRewards } from './storage.js';
+import { saveGame, loadGame, applyOfflineRewards, isFortuneAppliedToday, clearFortuneStatus, saveFortuneApplied } from './storage.js';
 import { updateStatsUI, showNumberPop, setFeedback, resetFeedback, showToast } from './ui.js';
 import { checkAchievements, renderAchievements } from './achievements.js';
 import { showEnding } from './endings.js';
-import { renderFortuneModal, applyDailyFortune } from './fortune.js';
+import { renderFortuneModal, initDailyFortune, applyFortuneInstantEffect } from './fortune.js';
 
 // 当前事件
 let currentEvent = null;
 
 // 游戏是否结束
 let isGameOver = false;
+
+/**
+ * 统一设置弹窗关闭逻辑
+ * @param {string} modalId - 弹窗元素ID
+ * @param {string} closeBtnId - 关闭按钮元素ID（可选）
+ */
+function setupModalClose(modalId, closeBtnId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    if (closeBtnId) {
+        const closeBtn = document.getElementById(closeBtnId);
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+        }
+    }
+
+    modal.onclick = (e) => {
+        if (e.target.id === modalId) {
+            modal.style.display = 'none';
+        }
+    };
+}
 
 /**
  * 应用选项效果
@@ -35,27 +60,25 @@ function applyEffects(opt, btnElement) {
         tags
     );
 
-    // 显示数值变化动画
-    Object.entries(changes).forEach(([stat, value]) => {
-        if (value !== 0) {
-            showNumberPop(value, rect.left + rect.width / 2, rect.top);
-        }
+    // 显示数值变化动画 - 依次飘向对应状态栏
+    const changeEntries = Object.entries(changes).filter(([, value]) => value !== 0);
+    changeEntries.forEach(([stat, value], index) => {
+        const statType = stat;  // game.js 返回的是 sanity, stress, money
+        setTimeout(() => {
+            showNumberPop(value, rect.left + rect.width / 2, rect.top, statType);
+        }, index * 150);
     });
 
-    // 检查成就
-    checkAchievements();
+    // 计算所有动画完成的时间（600ms动画 + 间隔150ms * 最后一个索引）
+    const animationDuration = 600 + (changeEntries.length - 1) * 150;
 
-    // 更新UI
-    updateStatsUI(gameState);
+    // 延迟更新UI，等待飘动画完成
+    setTimeout(() => {
+        updateStatsUI(gameState);
+    }, animationDuration);
 
-    // 显示反馈
-    const changesText = Object.entries(effects)
-        .map(([k, v]) => {
-            const icon = k === 'sanity' ? '💖' : k === 'stress' ? '😫' : '💰';
-            return `${v > 0 ? '+' : ''}${v}${icon}`;
-        })
-        .join(' ');
-    setFeedback(feedback, changesText);
+    // 显示反馈（不显示具体数值变化，只显示反馈文本）
+    setFeedback(feedback, '');
 
     // 保存游戏
     saveGame();
@@ -67,7 +90,7 @@ function applyEffects(opt, btnElement) {
         showEnding(ending, () => {
             resetGameState();
             isGameOver = false;
-            updateStatsUI(gameState);
+            updateStatsUI(gameState, false);
             loadRandomEvent();
             resetFeedback('人生重启，开始新的摸鱼之旅！');
             saveGame();
@@ -100,19 +123,11 @@ function loadRandomEvent() {
 
         // 生成选项显示内容
         const emoji = opt.text.split(' ')[1] || '📌';
-        const text = opt.text;
-
-        const effectsText = Object.entries(opt.effects)
-            .map(([k, v]) => {
-                const icon = k === 'sanity' ? '💖' : k === 'stress' ? '😫' : '💰';
-                return `${v > 0 ? '+' : ''}${v}${icon}`;
-            })
-            .join(' ');
+        const text = opt.text.split(' ')[0] || '';
 
         btn.innerHTML = `
             <span class="option-emoji">${emoji}</span>
             <div class="option-text">${text}</div>
-            <div class="option-effect">${effectsText}</div>
         `;
 
         btn.onclick = () => applyEffects(opt, btn);
@@ -125,8 +140,15 @@ function loadRandomEvent() {
 
 /**
  * 显示今日运势弹窗
+ * - applied=false 时显示弹窗
+ * - applied=true 时不显示弹窗
  */
 function showFortune() {
+    // 如果今日运势即时效果已应用，不显示弹窗
+    if (isFortuneAppliedToday()) {
+        return;
+    }
+
     const modal = document.getElementById('fortuneModal');
     document.getElementById('fortuneContent').innerHTML = renderFortuneModal();
     modal.style.display = 'flex';
@@ -134,7 +156,22 @@ function showFortune() {
     // 绑定关闭按钮事件
     document.getElementById('closeFortuneModalBtn').onclick = () => {
         modal.style.display = 'none';
+        // 应用即时效果
+        applyFortuneInstantEffect();
+        // 标记已应用
+        saveFortuneApplied();
+        // 更新UI并保存游戏
+        updateStatsUI(gameState);
+        saveGame();
     };
+}
+
+/**
+ * 应用即时效果（已移至 fortune.js）
+ * 此函数保留用于兼容
+ */
+function applyInstantEffects() {
+    // 已迁移至 fortune.js 的 applyInstantEffect
 }
 
 /**
@@ -162,26 +199,22 @@ function resetGame() {
     // 确定按钮 - 确认重开
     document.getElementById('confirmOkBtn').onclick = () => {
         modal.style.display = 'none';
+        clearFortuneStatus();  // 清除运势状态
         resetGameState();
         isGameOver = false;
-        updateStatsUI(gameState);
+        initDailyFortune();  // 重新生成运势
+        updateStatsUI(gameState, false);
         loadRandomEvent();
         resetFeedback('人生重启，开始新的摸鱼之旅！');
         saveGame();
+        showFortune();  // 显示新运势弹窗
         showToast('游戏已重置', '🔄');
     };
 
     // 关闭按钮 - 关闭弹窗
-    document.getElementById('closeConfirmBtn').onclick = () => {
-        modal.style.display = 'none';
-    };
-
-    // 点击遮罩关闭弹窗
-    modal.onclick = (e) => {
-        if (e.target.id === 'confirmModal') {
-            modal.style.display = 'none';
-        }
-    };
+    // document.getElementById('closeConfirmBtn').onclick = () => {
+    //     modal.style.display = 'none';
+    // };
 }
 
 /**
@@ -198,6 +231,9 @@ function init() {
         gameState.money = Math.max(0, gameState.money);
     }
 
+    // 初始化今日运势（需要在离线收益之前，以便离线收益受到运势倍率影响）
+    initDailyFortune();
+
     // 应用离线收益
     const offlineRewards = applyOfflineRewards();
     if (offlineRewards) {
@@ -205,12 +241,12 @@ function init() {
         showToast(msg, '🎁');
     }
 
-    // 应用今日运势
-    applyDailyFortune();
-
     // 初始化UI
-    updateStatsUI(gameState);
+    updateStatsUI(gameState, false);
     loadRandomEvent();
+
+    // 显示今日运势弹窗（applied=false 时才显示）
+    showFortune();
 
     // 绑定事件监听器
     document.getElementById('fortuneBtn').onclick = showFortune;
@@ -218,24 +254,7 @@ function init() {
     document.getElementById('resetBtn').onclick = resetGame;
 
     // 关闭弹窗事件
-    document.getElementById('closeFortuneBtn').onclick = () => {
-        document.getElementById('fortuneModal').style.display = 'none';
-    };
-    document.getElementById('closeAchievementBtn').onclick = () => {
-        document.getElementById('achievementModal').style.display = 'none';
-    };
-
-    // 点击遮罩关闭弹窗
-    document.getElementById('fortuneModal').onclick = (e) => {
-        if (e.target.id === 'fortuneModal') {
-            document.getElementById('fortuneModal').style.display = 'none';
-        }
-    };
-    document.getElementById('achievementModal').onclick = (e) => {
-        if (e.target.id === 'achievementModal') {
-            document.getElementById('achievementModal').style.display = 'none';
-        }
-    };
+    setupModalClose('achievementModal', 'closeAchievementBtn');
 
     // 注册Service Worker（PWA支持）
     if ('serviceWorker' in navigator) {
