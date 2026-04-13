@@ -6,4 +6,3 @@ node_modules/
 .idea/
 dist/
 .env
-server.js
