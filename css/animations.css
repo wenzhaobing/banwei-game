@@ -99,127 +99,37 @@
     animation: blink 1s ease infinite;
 }
 
-/* 成就解锁弹跳 */
-@keyframes achievementBounce {
-    0% {
-        transform: scale(0) rotate(-180deg);
-        opacity: 0;
-    }
-    60% {
-        transform: scale(1.2) rotate(10deg);
-    }
-    100% {
-        transform: scale(1) rotate(0deg);
-        opacity: 1;
-    }
+/* 数字飘起动画 */
+.number-popup {
+    font-size: 18px;
+    font-weight: bold;
+    font-family: inherit;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
 }
 
-/* 发光效果 */
-@keyframes glow {
-    0%, 100% {
-        box-shadow: 0 0 10px rgba(240, 201, 135, 0.5);
+.number-popup.positive {
+    color: #7c9e6e;
+}
+
+.number-popup.negative {
+    color: #e8a87c;
+}
+
+/* 状态栏高亮效果 */
+.stat-highlight {
+    animation: statPulse 0.3s ease;
+}
+
+@keyframes statPulse {
+    0% {
+        transform: scale(1);
     }
     50% {
-        box-shadow: 0 0 25px rgba(240, 201, 135, 0.8), 0 0 50px rgba(240, 201, 135, 0.4);
-    }
-}
-
-/* 加载动画 */
-@keyframes loading {
-    0% {
-        transform: rotate(0deg);
+        transform: scale(1.15);
+        color: #f0c987;
     }
     100% {
-        transform: rotate(360deg);
-    }
-}
-
-/* 渐变背景动画 */
-@keyframes gradientShift {
-    0% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
-/* 按钮点击反馈 */
-.btn-press {
-    transition: transform 0.1s ease;
-}
-
-.btn-press:active {
-    transform: scale(0.95);
-}
-
-/* 卡片悬停效果 */
-.card-hover {
-    transition: all 0.3s ease;
-}
-
-.card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-}
-
-/* 进度条动画 */
-.progress-animate {
-    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* 打字机效果 */
-@keyframes typewriter {
-    from {
-        width: 0;
-    }
-    to {
-        width: 100%;
-    }
-}
-
-/* 滑入效果 */
-@keyframes slideInLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* 弹跳效果 */
-@keyframes bounce {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-15px);
-    }
-}
-
-/* 旋转效果 */
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
+        transform: scale(1);
     }
 }

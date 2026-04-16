@@ -60,15 +60,17 @@ self.addEventListener('fetch', (event) => {
                 return response;
             }
             return fetch(event.request).then((response) => {
-                // 不缓存非正常响应
+                // 不缓存非正常响应、非同源请求
                 if (!response || response.status !== 200 || response.type !== 'basic') {
                     return response;
                 }
-                // 缓存响应
-                const responseToCache = response.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, responseToCache);
-                });
+                // 只缓存同源 HTTP/HTTPS 请求
+                if (event.request.url.startsWith('http')) {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
                 return response;
             });
         }).catch(() => {

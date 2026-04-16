@@ -3,14 +3,19 @@
  */
 import { gameState, updateStats, checkEnding, resetGameState } from './game.js';
 import { events } from './events.js';
-import { saveGame, loadGame, applyOfflineRewards, isFortuneAppliedToday, clearFortuneStatus, saveFortuneApplied } from './storage.js';
-import { updateStatsUI, showNumberPop, setFeedback, resetFeedback, showToast } from './ui.js';
+import { saveGame, loadGame, applyOfflineRewards, isFortuneAppliedToday, saveFortuneApplied, loadSettings, updateSetting, debouncedSave, immediateSave } from './storage.js';
+import { updateStatsUI, showNumberPop, setFeedback, resetFeedback, showToast, scheduleUIUpdate } from './ui.js';
 import { checkAchievements, renderAchievements } from './achievements.js';
-import { showEnding } from './endings.js';
-import { renderFortuneModal, initDailyFortune, applyFortuneInstantEffect } from './fortune.js';
+import { showEnding, setEndingContext } from './endings.js';
+import { renderFortuneModal, initDailyFortune, applyFortuneInstantEffect, getFortuneTip } from './fortune.js';
+import { soundManager } from './sound.js';
+import { vibrationManager } from './vibration.js';
 
 // 当前事件
 let currentEvent = null;
+
+// 上一次事件ID（用于避免连续重复）
+let lastEventId = null;
 
 // 游戏是否结束
 let isGameOver = false;
@@ -48,11 +53,12 @@ function setupModalClose(modalId, closeBtnId) {
 function applyEffects(opt, btnElement) {
     if (isGameOver) return;
 
-    // 获取按钮位置用于显示动画
+    vibrationManager.click();
+    soundManager.click();
+
     const rect = btnElement.getBoundingClientRect();
     const { effects, feedback, tags } = opt;
 
-    // 更新数值
     const changes = updateStats(
         effects.sanity || 0,
         effects.stress || 0,
@@ -60,57 +66,74 @@ function applyEffects(opt, btnElement) {
         tags
     );
 
-    // 显示数值变化动画 - 依次飘向对应状态栏
     const changeEntries = Object.entries(changes).filter(([, value]) => value !== 0);
     changeEntries.forEach(([stat, value], index) => {
-        const statType = stat;  // game.js 返回的是 sanity, stress, money
+        const statType = stat;
         setTimeout(() => {
             showNumberPop(value, rect.left + rect.width / 2, rect.top, statType);
         }, index * 150);
     });
 
-    // 计算所有动画完成的时间（600ms动画 + 间隔150ms * 最后一个索引）
     const animationDuration = 600 + (changeEntries.length - 1) * 150;
 
-    // 延迟更新UI，等待飘动画完成
+    // 动画结束后使用批量UI更新
     setTimeout(() => {
-        updateStatsUI(gameState);
+        scheduleUIUpdate(gameState);
     }, animationDuration);
 
-    // 显示反馈（不显示具体数值变化，只显示反馈文本）
     setFeedback(feedback, '');
 
-    // 保存游戏
-    saveGame();
+    // 常规操作使用防抖保存
+    debouncedSave();
 
-    // 检查结局
+    if (tags && tags.includes('slack_off')) {
+        soundManager.slack();
+    }
+
     const ending = checkEnding();
     if (ending) {
         isGameOver = true;
-        showEnding(ending, () => {
+        soundManager.ending(ending.isGood);
+        vibrationManager.ending();
+        // 设置结局上下文（游戏状态和轮数）
+        setEndingContext(gameState, gameState.eventCount?.total || 0);
+        showEnding(ending.type, () => {
             resetGameState();
             isGameOver = false;
             updateStatsUI(gameState, false);
             loadRandomEvent();
             resetFeedback('人生重启，开始新的摸鱼之旅！');
-            saveGame();
+            immediateSave();
         });
     } else {
-        // 延迟加载下一个事件
         setTimeout(loadRandomEvent, 1500);
     }
 }
 
 /**
- * 加载随机事件
+ * 加载随机事件（避免连续重复）
  */
 function loadRandomEvent() {
     if (isGameOver) return;
 
+    // 过滤掉上一次的事件，避免连续重复
+    let availableEvents = lastEventId
+        ? events.filter(e => e.id !== lastEventId)
+        : events;
+
+    // 如果过滤后没有可用事件（理论上不会发生），则使用全部事件
+    if (availableEvents.length === 0) {
+        availableEvents = events;
+    }
+
     // 随机选择一个事件
-    currentEvent = events[Math.floor(Math.random() * events.length)];
+    currentEvent = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+
+    // 记录当前事件ID
+    lastEventId = currentEvent.id;
 
     // 更新事件描述
+    document.getElementById('eventTitle').textContent = currentEvent.title;
     document.getElementById('eventDesc').textContent = currentEvent.desc;
 
     // 清空并重新生成选项按钮
@@ -126,8 +149,8 @@ function loadRandomEvent() {
         const text = opt.text.split(' ')[0] || '';
 
         btn.innerHTML = `
-            <span class="option-emoji">${emoji}</span>
             <div class="option-text">${text}</div>
+            <span class="option-emoji">${emoji}</span>
         `;
 
         btn.onclick = () => applyEffects(opt, btn);
@@ -139,12 +162,34 @@ function loadRandomEvent() {
 }
 
 /**
- * 显示今日运势弹窗
- * - applied=false 时显示弹窗
- * - applied=true 时不显示弹窗
+ * 更新运势小提示显示
  */
+function updateFortuneEffectDisplay() {
+    const panel = document.getElementById('fortuneEffectPanel');
+    const tipIcon = document.getElementById('fortuneTipIcon');
+    const tipText = document.getElementById('fortuneTipText');
+    const tipDetail = document.getElementById('fortuneTipDetail');
+
+    if (!panel || !tipText || !tipDetail) return;
+
+    const tip = getFortuneTip();
+    if (tip) {
+        // 更新图标
+        if (tipIcon) tipIcon.textContent = tip.icon;
+
+        // 更新文本
+        tipText.textContent = `今日小提示：${tip.text}`;
+        tipDetail.textContent = tip.detail;
+
+        // 更新样式类
+        panel.className = `fortune-tip-panel fortune-tip-${tip.type}`;
+        panel.style.display = 'flex';
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
 function showFortune() {
-    // 如果今日运势即时效果已应用，不显示弹窗
     if (isFortuneAppliedToday()) {
         return;
     }
@@ -153,16 +198,13 @@ function showFortune() {
     document.getElementById('fortuneContent').innerHTML = renderFortuneModal();
     modal.style.display = 'flex';
 
-    // 绑定关闭按钮事件
     document.getElementById('closeFortuneModalBtn').onclick = () => {
         modal.style.display = 'none';
-        // 应用即时效果
         applyFortuneInstantEffect();
-        // 标记已应用
         saveFortuneApplied();
-        // 更新UI并保存游戏
         updateStatsUI(gameState);
-        saveGame();
+        immediateSave();
+        updateFortuneEffectDisplay();
     };
 }
 
@@ -178,6 +220,8 @@ function applyInstantEffects() {
  * 显示成就墙弹窗
  */
 function showAchievements() {
+    vibrationManager.click();
+    soundManager.click();
     const modal = document.getElementById('achievementModal');
     document.getElementById('achievementContent').innerHTML = renderAchievements();
     modal.style.display = 'flex';
@@ -187,81 +231,114 @@ function showAchievements() {
  * 重置游戏
  */
 function resetGame() {
-    // 显示自定义确认弹窗
+    vibrationManager.click();
+    soundManager.click();
     const modal = document.getElementById('confirmModal');
     modal.style.display = 'flex';
 
-    // 取消按钮 - 关闭弹窗
     document.getElementById('confirmCancelBtn').onclick = () => {
         modal.style.display = 'none';
     };
 
-    // 确定按钮 - 确认重开
     document.getElementById('confirmOkBtn').onclick = () => {
         modal.style.display = 'none';
-        clearFortuneStatus();  // 清除运势状态
         resetGameState();
         isGameOver = false;
-        initDailyFortune();  // 重新生成运势
         updateStatsUI(gameState, false);
         loadRandomEvent();
         resetFeedback('人生重启，开始新的摸鱼之旅！');
-        saveGame();
-        showFortune();  // 显示新运势弹窗
+        immediateSave();
         showToast('游戏已重置', '🔄');
     };
-
-    // 关闭按钮 - 关闭弹窗
-    // document.getElementById('closeConfirmBtn').onclick = () => {
-    //     modal.style.display = 'none';
-    // };
 }
 
-/**
- * 初始化游戏
- */
+function showSettings() {
+    vibrationManager.click();
+    soundManager.click();
+    const modal = document.getElementById('settingsModal');
+    modal.style.display = 'flex';
+}
+
+function initSettings() {
+    const settings = loadSettings();
+
+    soundManager.setEnabled(settings.sound);
+    vibrationManager.setEnabled(settings.vibration);
+
+    const vibrationSwitch = document.getElementById('vibrationSwitch');
+    const soundSwitch = document.getElementById('soundSwitch');
+
+    if (vibrationSwitch) {
+        vibrationSwitch.checked = settings.vibration;
+        vibrationSwitch.onchange = () => {
+            const newSettings = updateSetting('vibration', vibrationSwitch.checked);
+            vibrationManager.setEnabled(newSettings.vibration);
+            if (newSettings.vibration) {
+                vibrationManager.click();
+            }
+        };
+    }
+
+    if (soundSwitch) {
+        soundSwitch.checked = settings.sound;
+        soundSwitch.onchange = () => {
+            const newSettings = updateSetting('sound', soundSwitch.checked);
+            soundManager.setEnabled(newSettings.sound);
+            if (newSettings.sound) {
+                soundManager.click();
+            }
+        };
+    }
+
+    const resetBtn = document.getElementById('settingsResetBtn');
+    if (resetBtn) {
+        resetBtn.onclick = () => {
+            const settingsModal = document.getElementById('settingsModal');
+            settingsModal.style.display = 'none';
+            resetGame();
+        };
+    }
+}
+
 function init() {
-    // 加载存档
     const savedState = loadGame();
     if (savedState) {
         Object.assign(gameState, savedState);
-        // 确保数值不为负数
         gameState.sanity = Math.max(0, gameState.sanity);
         gameState.stress = Math.max(0, gameState.stress);
         gameState.money = Math.max(0, gameState.money);
     }
 
-    // 初始化今日运势（需要在离线收益之前，以便离线收益受到运势倍率影响）
     initDailyFortune();
 
-    // 应用离线收益
     const offlineRewards = applyOfflineRewards();
     if (offlineRewards) {
         const msg = `离线${offlineRewards.hours}小时，获得 ${offlineRewards.rewards.sanity > 0 ? '+' : ''}${offlineRewards.rewards.sanity}💖 ${offlineRewards.rewards.stress < 0 ? '' : '+'}${offlineRewards.rewards.stress}😫 ${offlineRewards.rewards.money > 0 ? '+' : ''}${offlineRewards.rewards.money}💰`;
         showToast(msg, '🎁');
     }
 
-    // 初始化UI
     updateStatsUI(gameState, false);
     loadRandomEvent();
 
-    // 显示今日运势弹窗（applied=false 时才显示）
     showFortune();
+    updateFortuneEffectDisplay();
 
-    // 绑定事件监听器
-    document.getElementById('fortuneBtn').onclick = showFortune;
     document.getElementById('achievementBtn').onclick = showAchievements;
-    document.getElementById('resetBtn').onclick = resetGame;
+    document.getElementById('settingsBtn').onclick = showSettings;
 
-    // 关闭弹窗事件
+    initSettings();
+
     setupModalClose('achievementModal', 'closeAchievementBtn');
+    setupModalClose('settingsModal', 'closeSettingsBtn');
 
-    // 注册Service Worker（PWA支持）
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(err => {
-            console.log('Service Worker注册失败:', err);
-        });
-    }
+    soundManager.init();
+
+    // 暂时注释离线缓存功能
+    // if ('serviceWorker' in navigator) {
+    //     navigator.serviceWorker.register('sw.js').catch(err => {
+    //         console.log('Service Worker注册失败:', err);
+    //     });
+    // }
 }
 
 // 页面加载完成后初始化

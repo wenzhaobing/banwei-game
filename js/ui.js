@@ -2,6 +2,30 @@
  * UI更新函数
  */
 import { gameState } from './game.js';
+import { CONFIG } from './config.js';
+
+// 批量更新状态
+let pendingUIUpdate = false;
+let pendingState = null;
+
+/**
+ * 调度UI更新（批量处理，避免频繁重绘）
+ * @param {object} state - 游戏状态
+ * @param {boolean} animate - 是否播放动画
+ */
+export function scheduleUIUpdate(state = gameState, animate = true) {
+    pendingState = state;
+    if (!pendingUIUpdate) {
+        pendingUIUpdate = true;
+        requestAnimationFrame(() => {
+            if (pendingState) {
+                updateStatsUI(pendingState, animate);
+                pendingState = null;
+            }
+            pendingUIUpdate = false;
+        });
+    }
+}
 
 /**
  * 数值滚动动画
@@ -62,14 +86,14 @@ export function updateStatsUI(state = gameState, animate = true) {
     document.getElementById('moneyBar').style.width = `${moneyPercent}%`;
 
     // 理智过低警告效果
-    if (state.sanity <= 30) {
+    if (state.sanity <= CONFIG.SANITY_WARNING) {
         document.getElementById('sanityValue').classList.add('blink');
     } else {
         document.getElementById('sanityValue').classList.remove('blink');
     }
 
     // 压力过高警告效果
-    if (state.stress >= 70) {
+    if (state.stress >= CONFIG.STRESS_WARNING) {
         document.getElementById('stressValue').classList.add('shake');
         document.getElementById('gameContainer').classList.add('shake');
     } else {
@@ -96,7 +120,7 @@ export function showNumberPop(value, x, y, statType) {
     } else {
         return;
     }
-    
+
     const targetEl = document.getElementById(targetId);
     if (!targetEl) return;
 
@@ -110,23 +134,34 @@ export function showNumberPop(value, x, y, statType) {
     const icon = statType === 'sanity' ? '💖' : statType === 'stress' ? '😫' : '💰';
     popup.textContent = `${value >= 0 ? '+' : ''}${value}${icon}`;
 
-    popup.style.position = 'fixed';
-    popup.style.zIndex = '9999';
-    popup.style.pointerEvents = 'none';
-    popup.style.left = `${x}px`;
-    popup.style.top = `${y}px`;
-    popup.style.transform = 'translate(-50%, -100%)';
-    popup.style.opacity = '1';
-    popup.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    // 先设置初始状态（不带transition）
+    popup.style.cssText = `
+        position: fixed;
+        z-index: 9999;
+        pointer-events: none;
+        left: ${x}px;
+        top: ${y}px;
+        transform: translate(-50%, -100%);
+        opacity: 1;
+        font-size: 18px;
+        font-weight: bold;
+        font-family: inherit;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        white-space: nowrap;
+        color: ${value >= 0 ? '#7c9e6e' : '#e8a87c'};
+    `;
 
     document.body.appendChild(popup);
 
-    requestAnimationFrame(() => {
-        popup.style.left = `${targetX}px`;
-        popup.style.top = `${targetY}px`;
-        popup.style.transform = 'translate(-50%, -50%)';
-        popup.style.opacity = '0';
-    });
+    // 强制重绘后再添加动画
+    void popup.offsetHeight;
+
+    // 添加transition并设置目标状态
+    popup.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    popup.style.left = `${targetX}px`;
+    popup.style.top = `${targetY}px`;
+    popup.style.transform = 'translate(-50%, -50%)';
+    popup.style.opacity = '0';
 
     setTimeout(() => {
         popup.remove();

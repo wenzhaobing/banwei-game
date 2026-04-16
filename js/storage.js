@@ -6,6 +6,12 @@ import { CONFIG } from './config.js';
 
 const STORAGE_KEY = 'banweiGame';
 const FORTUNE_KEY = 'banweiFortune';
+const SETTINGS_KEY = 'banweiSettings';
+
+const DEFAULT_SETTINGS = {
+    vibration: false,
+    sound: false
+};
 
 /**
  * 获取今日日期字符串
@@ -24,7 +30,6 @@ export function getFortuneData() {
     if (!saved) return null;
     try {
         const data = JSON.parse(saved);
-        // 检查是否是今天的数据
         if (data.date !== getTodayString()) {
             return null;
         }
@@ -32,14 +37,6 @@ export function getFortuneData() {
     } catch {
         return null;
     }
-}
-
-/**
- * 检查今日运势是否已生成
- * @returns {boolean}
- */
-export function isFortuneGeneratedToday() {
-    return getFortuneData() !== null;
 }
 
 /**
@@ -76,13 +73,6 @@ export function saveFortuneApplied() {
 }
 
 /**
- * 清除今日运势状态（用于重开人生时重新随机运势）
- */
-export function clearFortuneStatus() {
-    localStorage.removeItem(FORTUNE_KEY);
-}
-
-/**
  * 保存游戏到本地存储
  */
 export function saveGame() {
@@ -91,6 +81,33 @@ export function saveGame() {
         saveTime: Date.now()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+}
+
+// 防抖保存定时器
+let saveTimer = null;
+
+/**
+ * 防抖保存（延迟1秒执行，避免频繁写入）
+ */
+export function debouncedSave() {
+    if (saveTimer) {
+        clearTimeout(saveTimer);
+    }
+    saveTimer = setTimeout(() => {
+        saveGame();
+        saveTimer = null;
+    }, 1000);
+}
+
+/**
+ * 立即保存并取消待执行的防抖保存
+ */
+export function immediateSave() {
+    if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+    }
+    saveGame();
 }
 
 /**
@@ -165,8 +182,28 @@ export function applyOfflineRewards() {
 }
 
 /**
- * 清除存档
+ * 加载设置
+ * @returns {object}
  */
-export function clearSave() {
-    localStorage.removeItem(STORAGE_KEY);
+export function loadSettings() {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (!saved) return { ...DEFAULT_SETTINGS };
+    try {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+    } catch {
+        return { ...DEFAULT_SETTINGS };
+    }
+}
+
+/**
+ * 更新设置
+ * @param {string} key
+ * @param {*} value
+ * @returns {object}
+ */
+export function updateSetting(key, value) {
+    const settings = loadSettings();
+    settings[key] = value;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    return settings;
 }

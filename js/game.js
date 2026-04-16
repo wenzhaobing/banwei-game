@@ -25,6 +25,7 @@ export let gameState = {
 
     // 事件计数
     eventCount: {
+        total: 0,
         slack_off: 0,
         backstab: 0,
         overtime: 0,
@@ -53,7 +54,7 @@ export let gameState = {
  * @param {number} max - 最大值
  * @returns {number}
  */
-export function clamp(value, min, max) {
+function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
 }
 
@@ -117,8 +118,11 @@ function applyModifier(effects, tags) {
  * @returns {object} 变化值
  */
 export function updateStats(sanityDelta, stressDelta, moneyDelta, tags = []) {
-    // 应用运势修正
-    const modified = applyModifier({ sanity: sanityDelta, stress: stressDelta, money: moneyDelta }, tags);
+    // 1. 先应用运势修正
+    let modified = applyModifier({ sanity: sanityDelta, stress: stressDelta, money: moneyDelta }, tags);
+
+    // 2. 再应用成就奖励修正
+    modified = applyAchievementModifier(modified, tags);
 
     // 更新数值
     gameState.sanity = clamp(gameState.sanity + modified.sanity, 0, gameState.maxSanity);
@@ -131,14 +135,12 @@ export function updateStats(sanityDelta, stressDelta, moneyDelta, tags = []) {
     }
 
     // 统计事件
+    gameState.eventCount.total++;
     tags.forEach(tag => {
         if (gameState.eventCount[tag] !== undefined) {
             gameState.eventCount[tag]++;
         }
     });
-
-    // 应用成就奖励
-    applyAchievementRewards(modified.sanity, modified.stress, modified.money, tags);
 
     return {
         sanity: modified.sanity,
@@ -148,46 +150,62 @@ export function updateStats(sanityDelta, stressDelta, moneyDelta, tags = []) {
 }
 
 /**
- * 应用成就奖励
+ * 应用成就奖励修正到效果数值
+ * @param {object} effects - 原始效果 { sanity, stress, money }
+ * @param {string[]} tags - 事件标签
+ * @returns {object} 修正后的效果
  */
-function applyAchievementRewards(sanityDelta, stressDelta, moneyDelta, tags) {
-    // 摸鱼宗师奖励：摸鱼时收益+50%
+function applyAchievementModifier(effects, tags) {
+    const result = { ...effects };
+
+    // 摸鱼宗师奖励：摸鱼时所有收益+50%
     if (tags.includes('slack_off') && gameState.achievements.slack_master) {
-        gameState.sanity = clamp(gameState.sanity + Math.round(sanityDelta * 0.5), 0, gameState.maxSanity);
+        result.sanity = Math.floor(result.sanity * 1.5);
+        result.stress = Math.floor(result.stress * 1.5);
+        result.money = Math.floor(result.money * 1.5);
     }
 
-    // 背锅侠奖励：背锅时压力减少
+    // 背锅侠奖励：背锅时压力惩罚减少50%
     if (tags.includes('backstab') && gameState.achievements.backstab_king) {
-        gameState.stress = clamp(gameState.stress - 5, 0, gameState.maxStress);
+        result.stress = Math.floor(result.stress * 0.5);
     }
 
-    // 加班战神奖励：加班获得额外金钱
+    // 加班战神奖励：加班获得额外金钱+20
     if (tags.includes('overtime') && gameState.achievements.overtime_warrior) {
-        gameState.money = clamp(gameState.money + 20, 0, gameState.maxMoney);
+        result.money += 20;
     }
 
-    // 咖啡中毒奖励：咖啡效果翻倍
+    // 咖啡中毒奖励：咖啡效果翻倍（在原有效果基础上再增加100%）
     if (tags.includes('coffee') && gameState.achievements.coffee_addict) {
-        gameState.sanity = clamp(gameState.sanity + Math.round(sanityDelta * 1.0), 0, gameState.maxSanity);
+        result.sanity += result.sanity;
+        result.stress += result.stress;
     }
 
-    // 小目标达成奖励：存款利息+10%
-    if (gameState.achievements.millionaire) {
-        if (moneyDelta > 0) {
-            gameState.money = clamp(gameState.money + Math.round(moneyDelta * 0.1), 0, gameState.maxMoney);
-        }
+    // 小目标达成奖励：存款正收益时额外+10%
+    if (gameState.achievements.millionaire && result.money > 0) {
+        result.money += Math.floor(result.money * 0.1);
     }
+
+    return result;
 }
 
 /**
  * 检查结局
- * @returns {string|null} 结局类型
+ * @returns {object|null} 结局对象 { type: string, isGood: boolean } 或 null
  */
 export function checkEnding() {
-    if (gameState.sanity <= CONFIG.ENDING_SANITY_ZERO) return 'sanity_zero';
-    if (gameState.money <= CONFIG.ENDING_MONEY_ZERO) return 'money_zero';
-    if (gameState.stress >= CONFIG.ENDING_STRESS_MAX) return 'stress_max';
-    if (gameState.sanity >= CONFIG.ENDING_SANITY_MAX) return 'sanity_max';
+    if (gameState.sanity <= CONFIG.ENDING_SANITY_ZERO) {
+        return { type: 'sanity_zero', isGood: false };
+    }
+    if (gameState.money <= CONFIG.ENDING_MONEY_ZERO) {
+        return { type: 'money_zero', isGood: false };
+    }
+    if (gameState.stress >= CONFIG.ENDING_STRESS_MAX) {
+        return { type: 'stress_max', isGood: false };
+    }
+    if (gameState.sanity >= CONFIG.ENDING_SANITY_MAX) {
+        return { type: 'sanity_max', isGood: true };
+    }
     return null;
 }
 
@@ -209,6 +227,7 @@ export function resetGameState() {
         maxStressEver: 0,
         achievements: { ...gameState.achievements },
         eventCount: {
+            total: 0,
             slack_off: 0,
             backstab: 0,
             overtime: 0,
@@ -226,12 +245,4 @@ export function resetGameState() {
         }
     };
     return gameState;
-}
-
-/**
- * 获取游戏状态副本
- * @returns {object}
- */
-export function getGameState() {
-    return { ...gameState };
 }
