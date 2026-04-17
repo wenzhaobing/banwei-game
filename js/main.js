@@ -9,7 +9,7 @@ import { checkAchievements, renderAchievements } from './achievements.js';
 import { showEnding, setEndingContext } from './endings.js';
 import { renderFortuneModal, initDailyFortune, applyFortuneInstantEffect, getFortuneTip } from './fortune.js';
 import { soundManager } from './sound.js';
-import { vibrationManager } from './vibration.js';
+import { EventGenerator } from './utils/event-generator.js';
 
 // 当前事件
 let currentEvent = null;
@@ -53,7 +53,6 @@ function setupModalClose(modalId, closeBtnId) {
 function applyEffects(opt, btnElement) {
     if (isGameOver) return;
 
-    vibrationManager.click();
     soundManager.click();
 
     const rect = btnElement.getBoundingClientRect();
@@ -94,7 +93,6 @@ function applyEffects(opt, btnElement) {
     if (ending) {
         isGameOver = true;
         soundManager.ending(ending.isGood);
-        vibrationManager.ending();
         // 设置结局上下文（游戏状态和轮数）
         setEndingContext(gameState, gameState.eventCount?.total || 0);
         showEnding(ending.type, () => {
@@ -126,8 +124,14 @@ function loadRandomEvent() {
         availableEvents = events;
     }
 
-    // 随机选择一个事件
-    currentEvent = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+    // 随机选择一个事件配置
+    const eventConfig = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+    
+    // 使用事件生成器动态生成完整事件（方案2）
+    currentEvent = EventGenerator.generateEvent(eventConfig);
+    
+    // 随机打乱选项顺序（方案1）
+    currentEvent.options = EventGenerator.shuffleOptions(currentEvent.options);
 
     // 记录当前事件ID
     lastEventId = currentEvent.id;
@@ -220,7 +224,6 @@ function applyInstantEffects() {
  * 显示成就墙弹窗
  */
 function showAchievements() {
-    vibrationManager.click();
     soundManager.click();
     const modal = document.getElementById('achievementModal');
     document.getElementById('achievementContent').innerHTML = renderAchievements();
@@ -231,7 +234,6 @@ function showAchievements() {
  * 重置游戏
  */
 function resetGame() {
-    vibrationManager.click();
     soundManager.click();
     const modal = document.getElementById('confirmModal');
     modal.style.display = 'flex';
@@ -253,7 +255,6 @@ function resetGame() {
 }
 
 function showSettings() {
-    vibrationManager.click();
     soundManager.click();
     const modal = document.getElementById('settingsModal');
     modal.style.display = 'flex';
@@ -263,21 +264,8 @@ function initSettings() {
     const settings = loadSettings();
 
     soundManager.setEnabled(settings.sound);
-    vibrationManager.setEnabled(settings.vibration);
 
-    const vibrationSwitch = document.getElementById('vibrationSwitch');
     const soundSwitch = document.getElementById('soundSwitch');
-
-    if (vibrationSwitch) {
-        vibrationSwitch.checked = settings.vibration;
-        vibrationSwitch.onchange = () => {
-            const newSettings = updateSetting('vibration', vibrationSwitch.checked);
-            vibrationManager.setEnabled(newSettings.vibration);
-            if (newSettings.vibration) {
-                vibrationManager.click();
-            }
-        };
-    }
 
     if (soundSwitch) {
         soundSwitch.checked = settings.sound;
