@@ -52,22 +52,12 @@ body {
   overflow: hidden;
 }
 
-.stats-panel {
-  flex-shrink: 0;
-  background: var(--panel-bg);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border-bottom: 2px solid var(--border-color);
-}
-
 /* 运势小提示面板 */
 .fortune-tip-panel {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  margin: 16px;
+  margin: 8px;
   padding: 12px 16px;
   border-radius: 16px;
   font-size: 13px;
@@ -138,16 +128,18 @@ body {
   opacity: 0.8;
 }
 
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.stats-panel {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: var(--panel-bg);
+  border-bottom: 2px solid var(--border-color);
 }
 
-.stat-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.stat-item {
+  display: contents;
 }
 
 .stat-label {
@@ -180,31 +172,30 @@ body {
 }
 
 .stat-bar-bg {
-  height: 12px;
+  height: 8px;
   background: rgba(0, 0, 0, 0.08);
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
+  min-width: 60px;
 }
 
 .stat-bar-fill {
   height: 100%;
-  border-radius: 6px;
+  width: 100%;
+  border-radius: 4px;
   transition: width 0.4s ease;
 }
 
 .sanity-fill {
   background: var(--sanity-gradient);
-  width: 50%;
 }
 
 .stress-fill {
   background: var(--stress-gradient);
-  width: 0%;
 }
 
 .money-fill {
   background: var(--money-gradient);
-  width: 50%;
 }
 
 /* ============ 事件卡片 - 突出样式 ============ */
@@ -212,7 +203,7 @@ body {
 .event-card {
   flex: 1;
   background: linear-gradient(135deg, #ffffff 0%, #fef9f0 100%);
-  margin: 12px;
+  margin: 0 12px 12px;
   padding: 16px;
   border-radius: 24px;
   box-shadow:
@@ -247,8 +238,7 @@ body {
   flex-shrink: 0;
   font-size: 22px;
   text-align: center;
-  margin-bottom: 12px;
-  padding: 32px 0 16px;
+  padding: 0 16px 16px;
   position: relative;
   width: 100%;
 }
@@ -262,10 +252,10 @@ body {
   color: #3a2c1f;
   margin-top: 12px;
   border-radius: 18px;
-  min-height: 90px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* min-height: 60px; */
+  /* display: flex; */
+  /* align-items: center; */
+  /* justify-content: center; */
   /* border: 2px solid #e8dccc; */
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -274,7 +264,7 @@ body {
 }
 
 /* 描述文字前的装饰 */
-.event-desc::before {
+/* .event-desc::before {
   content: '"';
   font-size: 36px;
   color: #7c9e6e;
@@ -292,9 +282,9 @@ body {
   opacity: 0.3;
   position: absolute;
   right: 10px;
-  bottom: 6px;
+  top: 6px;
   font-family: serif;
-}
+} */
 
 /* 选项按钮 - 更突出的样式 */
 .options {
@@ -332,8 +322,8 @@ body {
 .option-btn::before {
   content: counter(option-counter);
   counter-increment: option-counter;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background: #f0e8dc;
   border-radius: 50%;
   display: flex;
@@ -363,7 +353,7 @@ body {
 
 /* 选项图标 */
 .option-emoji {
-  font-size: 32px;
+  font-size: 28px;
   min-width: 56px;
   text-align: center;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
@@ -386,7 +376,7 @@ body {
   font-size: 13px;
   color: #7c6b54;
   text-align: center;
-  min-height: 60px;
+  min-height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -406,7 +396,6 @@ body {
   flex-shrink: 0;
   display: flex;
   justify-content: space-around;
-  padding: 12px;
   background: var(--panel-bg);
   border-top: 2px solid var(--border-color);
 }
@@ -556,7 +545,7 @@ body {
 .ending-card {
   background: linear-gradient(135deg, #fef7e8 0%, #fff5e6 100%);
   border-radius: 32px;
-  padding: 40px;
+  padding: 16px;
   max-width: 380px;
   width: 100%;
   text-align: center;
@@ -566,7 +555,7 @@ body {
 
 .ending-icon {
   font-size: 72px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   animation: pulse 2s ease infinite;
 }
 
@@ -580,8 +569,7 @@ body {
 .ending-desc {
   font-size: 16px;
   color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .ending-buttons {
@@ -637,8 +625,7 @@ body {
 .personality-desc {
   font-size: 14px;
   color: var(--text-secondary);
-  line-height: 1.8;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   padding: 16px;
   background: rgba(0, 0, 0, 0.03);
   border-radius: 12px;
@@ -650,7 +637,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.5);
   border-radius: 12px;
@@ -668,52 +655,4 @@ body {
 
 .stats-summary .stat:nth-child(even) {
   text-align: right;
-}
-
-@media (max-width: 480px) {
-  .game-container {
-    border-radius: 0;
-  }
-
-  .event-card {
-    margin: 8px;
-    padding: 12px;
-  }
-
-  .event-title {
-    font-size: 20px;
-  }
-
-  .event-desc {
-    font-size: 16px;
-    /* padding: 14px; */
-    min-height: 80px;
-  }
-
-  .event-desc::before,
-  .event-desc::after {
-    font-size: 28px;
-  }
-
-  .option-btn {
-    padding: 12px 14px;
-  }
-
-  .option-emoji {
-    font-size: 26px;
-    min-width: 44px;
-  }
-
-  .option-text {
-    font-size: 14px;
-  }
-
-  .bottom-nav {
-    padding: 10px;
-  }
-
-  .nav-btn {
-    padding: 6px 12px;
-    font-size: 11px;
-  }
 }

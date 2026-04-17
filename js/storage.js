@@ -9,7 +9,6 @@ const FORTUNE_KEY = 'banweiFortune';
 const SETTINGS_KEY = 'banweiSettings';
 
 const DEFAULT_SETTINGS = {
-    vibration: false,
     sound: false
 };
 

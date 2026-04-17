@@ -12,9 +12,9 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <meta name="description" content="今天不想上班 - 测测你的职场人设">
-    <title>今天不想上班 - 测测你的职场人设</title>
-    <!-- <title>模拟器</title> -->
+    <!-- <meta name="description" content="今天不想上班 - 测测你的职场人设"> -->
+    <!-- <title>今天不想上班 - 测测你的职场人设</title> -->
+    <title>模拟器</title>
 
     <!-- CSS样式 -->
     <link rel="stylesheet" href="css/main.css" />
@@ -41,40 +41,34 @@
       <!-- 状态栏 -->
       <div class="stats-panel">
         <div class="stat-item">
-          <div class="stat-header">
-            <span class="stat-label">
-              <span class="stat-emoji">💖</span>
-              <span>理智值</span>
-            </span>
-            <span class="stat-value" id="sanityValue">100</span>
+          <div class="stat-label">
+            <span class="stat-emoji">💖</span>
+            <span>理智值</span>
           </div>
           <div class="stat-bar-bg">
             <div class="stat-bar-fill sanity-fill" id="sanityBar"></div>
           </div>
+          <span class="stat-value" id="sanityValue">100</span>
         </div>
         <div class="stat-item">
-          <div class="stat-header">
-            <span class="stat-label">
-              <span class="stat-emoji">😫</span>
-              <span>压力值</span>
-            </span>
-            <span class="stat-value" id="stressValue">0</span>
+          <div class="stat-label">
+            <span class="stat-emoji">😫</span>
+            <span>压力值</span>
           </div>
           <div class="stat-bar-bg">
             <div class="stat-bar-fill stress-fill" id="stressBar"></div>
           </div>
+          <span class="stat-value" id="stressValue">0</span>
         </div>
         <div class="stat-item">
-          <div class="stat-header">
-            <span class="stat-label">
-              <span class="stat-emoji">💰</span>
-              <span>存款</span>
-            </span>
-            <span class="stat-value" id="moneyValue">500</span>
+          <div class="stat-label">
+            <span class="stat-emoji">💰</span>
+            <span>存款</span>
           </div>
           <div class="stat-bar-bg">
             <div class="stat-bar-fill money-fill" id="moneyBar"></div>
           </div>
+          <span class="stat-value" id="moneyValue">500</span>
         </div>
       </div>
 
@@ -181,16 +175,6 @@
           </div>
           <div class="settings-section">
             <div class="settings-section-title">─── 偏好设置 ───</div>
-            <div class="settings-item">
-              <div class="settings-item-info">
-                <div class="settings-item-title">📳 震动反馈</div>
-                <div class="settings-item-desc">操作时震动提示</div>
-              </div>
-              <label class="settings-switch">
-                <input type="checkbox" id="vibrationSwitch" />
-                <span class="settings-slider"></span>
-              </label>
-            </div>
             <div class="settings-item">
               <div class="settings-item-info">
                 <div class="settings-item-title">🔊 音效</div>

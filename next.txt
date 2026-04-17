@@ -1,0 +1,261 @@
+3、事件和选项固定优化
+4、分享功能
+
+
+
+根据 EVENT.md 文档，有7种选项池类型。其中 random （随机型）和 special （特殊型）比较特殊：
+
+- random : 效果完全随机，如"摸鱼抽奖 🎰"
+- special : 触发隐藏剧情或特殊效果，如"召唤摸鱼之神 🐟✨"
+
+## 🎲 random（随机型）和 special（特殊型）详解
+
+这两种是选项池中的「特殊类型」，用来制造**惊喜感**和**彩蛋感**，让玩家在普通游戏流程中遇到意想不到的事情。
+
+---
+
+## 一、核心区别
+
+| 维度 | random（随机型） | special（特殊型） |
+|------|-----------------|-------------------|
+| **核心特征** | 效果不可预测 | 效果特殊/稀有 |
+| **触发条件** | 普通选择 | 特定条件解锁 |
+| **出现频率** | 可以较高（10-20%） | 极低（1-5%） |
+| **玩家感知** | 「运气游戏」 | 「发现彩蛋」 |
+| **设计目的** | 增加不确定性 | 增加惊喜感 |
+
+---
+
+## 二、random（随机型）
+
+### 设计理念
+让玩家**无法预知结果**，每一次选择都是赌博，增加刺激感和重玩性。
+
+### 数据结构
+
+```json
+{
+    "random": [
+        {
+            "id": "random_001",
+            "text": "摸鱼抽奖 🎰",
+            "effects": "random",
+            "feedback": "random",
+            "tags": ["random"]
+        },
+        {
+            "id": "random_002", 
+            "text": "职场轮盘赌 🎡",
+            "effects": "random",
+            "feedback": "random",
+            "tags": ["random"]
+        },
+        {
+            "id": "random_003",
+            "text": "命运的抉择 🔮",
+            "effects": "random",
+            "feedback": "random",
+            "tags": ["random"]
+        }
+    ]
+}
+```
+
+### 随机结果池
+
+```javascript
+const RANDOM_OUTCOMES = {
+    // 大吉（15%概率）
+    great: [
+        { sanity: 30, stress: -30, money: 200, feedback: "✨ 欧皇附体！运气爆棚！" },
+        { sanity: 25, stress: -25, money: 150, feedback: "🍀 今天运气不错！" }
+    ],
+    // 小吉（25%概率）
+    good: [
+        { sanity: 15, stress: -15, money: 80, feedback: "😊 运气不错，小赚一笔" },
+        { sanity: 10, stress: -10, money: 50, feedback: "👍 还行，不亏" }
+    ],
+    // 平（30%概率）
+    neutral: [
+        { sanity: 5, stress: -5, money: 10, feedback: "😐 平平无奇" },
+        { sanity: 0, stress: 0, money: 0, feedback: "🤔 无事发生" }
+    ],
+    // 小凶（20%概率）
+    bad: [
+        { sanity: -10, stress: 10, money: -50, feedback: "😫 运气不佳" },
+        { sanity: -15, stress: 15, money: -80, feedback: "💔 亏大了" }
+    ],
+    // 大凶（10%概率）
+    terrible: [
+        { sanity: -30, stress: 30, money: -200, feedback: "💀 非酋本酋..." },
+        { sanity: -25, stress: 25, money: -150, feedback: "😭 今天不宜赌博" }
+    ]
+};
+
+function getRandomOutcome() {
+    const rand = Math.random();
+    
+    if (rand < 0.15) {
+        return RANDOM_OUTCOMES.great[Math.floor(Math.random() * RANDOM_OUTCOMES.great.length)];
+    } else if (rand < 0.40) {
+        return RANDOM_OUTCOMES.good[Math.floor(Math.random() * RANDOM_OUTCOMES.good.length)];
+    } else if (rand < 0.70) {
+        return RANDOM_OUTCOMES.neutral[Math.floor(Math.random() * RANDOM_OUTCOMES.neutral.length)];
+    } else if (rand < 0.90) {
+        return RANDOM_OUTCOMES.bad[Math.floor(Math.random() * RANDOM_OUTCOMES.bad.length)];
+    } else {
+        return RANDOM_OUTCOMES.terrible[Math.floor(Math.random() * RANDOM_OUTCOMES.terrible.length)];
+    }
+}
+```
+
+### 使用场景
+
+| 场景 | 示例选项 | 效果 |
+|------|----------|------|
+| 摸鱼抽奖 | "试试手气 🎰" | 可能大赚也可能大亏 |
+| 职场赌博 | "赌一把 🎲" | 高风险高回报 |
+| 神秘盒子 | "打开神秘盒子 📦" | 随机效果 |
+
+---
+
+## 三、special（特殊型）
+
+### 设计理念
+作为**隐藏彩蛋**，需要特定条件才能出现，给玩家「发现秘密」的成就感。
+
+### 数据结构
+
+```json
+{
+    "special": [
+        {
+            "id": "special_001",
+            "text": "召唤摸鱼之神 🐟✨",
+            "effects": { "sanity": 30, "stress": -30, "money": 200 },
+            "feedback": "摸鱼之神降临！你今天摸鱼无人能挡！",
+            "tags": ["special", "slack_off"],
+            "unlockCondition": { "slack_count": 20 }  // 摸鱼20次解锁
+        },
+        {
+            "id": "special_002",
+            "text": "老板的秘药 💊",
+            "effects": { "sanity": 50, "stress": -50, "money": -200 },
+            "feedback": "你喝下后精神百倍，但钱包瘪了",
+            "tags": ["special"],
+            "unlockCondition": { "stress_peak": 90 }   // 压力峰值90解锁
+        },
+        {
+            "id": "special_003",
+            "text": "时间回溯 ⏰",
+            "effects": "rewind",  // 特殊效果：回到上一轮
+            "feedback": "时光倒流，你回到了上一轮",
+            "tags": ["special"],
+            "unlockCondition": { "rounds": 50 }       // 存活50轮解锁
+        },
+        {
+            "id": "special_004",
+            "text": "公司机密文件 📁",
+            "effects": { "sanity": -10, "stress": -20, "money": 500 },
+            "feedback": "你发现了老板的秘密...",
+            "tags": ["special", "risk"],
+            "unlockCondition": { "backstab_count": 10 } // 背锅10次解锁
+        },
+        {
+            "id": "special_005",
+            "text": "摸鱼真经 📖",
+            "effects": { "sanity": 20, "stress": -20, "money": 100 },
+            "feedback": "你学会了传说中的摸鱼大法！",
+            "tags": ["special", "slack_off", "self_care"],
+            "unlockCondition": { "coffee_count": 15 }  // 喝咖啡15次解锁
+        }
+    ]
+}
+```
+
+### 解锁条件类型
+
+```javascript
+const UNLOCK_CONDITIONS = {
+    // 累计次数类
+    slack_count: (state, value) => state.eventCount.slack_off >= value,
+    backstab_count: (state, value) => state.eventCount.backstab >= value,
+    coffee_count: (state, value) => state.eventCount.coffee >= value,
+    overtime_count: (state, value) => state.eventCount.overtime >= value,
+    
+    // 数值类
+    stress_peak: (state, value) => state.maxStressEver >= value,
+    sanity_min: (state, value) => state.minSanityEver <= value,
+    money_max: (state, value) => state.maxMoneyEver >= value,
+    
+    // 游戏进度类
+    rounds: (state, value) => state.totalRounds >= value,
+    endings: (state, value) => state.unlockedEndings.length >= value,
+    
+    // 成就类
+    achievement: (state, value) => state.achievements[value] === true
+};
+
+// 检查特殊选项是否解锁
+function isSpecialOptionUnlocked(option, gameState) {
+    if (!option.unlockCondition) return true;
+    
+    for (const [condition, value] of Object.entries(option.unlockCondition)) {
+        const checkFn = UNLOCK_CONDITIONS[condition];
+        if (checkFn && !checkFn(gameState, value)) {
+            return false;
+        }
+    }
+    return true;
+}
+```
+
+---
+
+## 四、使用频率建议
+
+| 类型 | 出现概率 | 说明 |
+|------|----------|------|
+| **random** | 10-20% | 每个事件池中放1-2个随机选项 |
+| **special** | 1-5% | 仅在特定条件满足时出现 |
+
+### 事件池配置示例
+
+```json
+{
+    "slack": [
+        // 普通选项 x 5
+        { "text": "刷短视频 😂", "tags": ["slack_off"] },
+        { "text": "打游戏 🎮", "tags": ["slack_off"] },
+        { "text": "看小说 📚", "tags": ["slack_off"] },
+        { "text": "刷淘宝 🛍️", "tags": ["slack_off"] },
+        { "text": "睡午觉 😴", "tags": ["slack_off"] },
+        // 随机选项 x 1
+        { "text": "摸鱼抽奖 🎰", "effects": "random", "tags": ["random"] },
+        // 特殊选项 x 1（条件满足时出现）
+        { "text": "召唤摸鱼之神 🐟✨", "effects": { "sanity": 30, "stress": -30, "money": 200 }, "unlockCondition": { "slack_count": 20 } }
+    ]
+}
+```
+
+---
+
+## 五、用户体验对比
+
+| 类型 | 玩家第一次遇到 | 玩家多次遇到 |
+|------|---------------|-------------|
+| **random** | 「哇，还有抽奖？」 | 「再赌一次！」 |
+| **special** | 「卧槽，还有这种隐藏选项？」 | 「终于又刷出来了！」 |
+
+---
+
+## 六、总结
+
+| 类型 | 核心价值 | 设计要点 |
+|------|----------|----------|
+| **random** | 增加不确定性和刺激感 | 结果要有好有坏，概率要平衡 |
+| **special** | 增加探索感和惊喜感 | 需要特定条件解锁，效果要足够特殊 |
+
+**一句话总结**：
+- `random` = 每次选都像开盲盒
+- `special` = 发现隐藏彩蛋的惊喜

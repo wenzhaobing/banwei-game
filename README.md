@@ -56,7 +56,6 @@ banwei-over/
     ├── storage.js          # 存档系统
     ├── ui.js               # UI更新函数
     ├── sound.js            # 音效管理器
-    ├── vibration.js        # 震动管理器
     └── config.js           # 游戏配置常量
 ```
 
@@ -74,7 +73,6 @@ banwei-over/
 | LocalStorage | 本地存档 |
 | PWA | 离线访问 |
 | Web Audio API | 音效生成 |
-| Vibration API | 震动反馈 |
 
 ### 模块依赖关系
 
@@ -88,8 +86,7 @@ main.js (入口)
     ├── achievements.js (成就)
     ├── endings.js (结局)
     ├── fortune.js (运势)
-    ├── sound.js (音效)
-    └── vibration.js (震动)
+    └── sound.js (音效)
 ```
 
 ---
