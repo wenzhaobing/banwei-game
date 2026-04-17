@@ -198,22 +198,74 @@ export function showEnding(endingType, onRestart) {
     };
 
     // 分享按钮
-    document.getElementById('endingShareBtn').onclick = () => {
+    document.getElementById('endingShareBtn').onclick = async () => {
         const shareText = `今天不想上班？来测测你的打工命运，看你能活几轮！我打出了【${endingInfo.title}】结局！\n${tags}\n${description}`;
+        const fullText = `${shareText}\n${location.href}`;
+        
+        // 尝试使用 Web Share API（主要在移动端支持）
         if (navigator.share) {
-            navigator.share({
-                title: '今天不想上班',
-                text: shareText,
-                url: location.href
-            }).catch(() => {});
+            try {
+                await navigator.share({
+                    title: '今天不想上班',
+                    text: shareText,
+                    url: location.href
+                });
+                // 分享成功或用户完成分享
+                showToast('分享成功！', '✅');
+            } catch (error) {
+                // 区分用户取消和真正的错误
+                if (error.name === 'AbortError') {
+                    // 用户取消了分享，不显示错误
+                    console.log('用户取消了分享');
+                } else {
+                    // 其他错误，降级到剪贴板
+                    console.error('分享失败:', error);
+                    await fallbackToClipboard(fullText);
+                }
+            }
         } else {
-            navigator.clipboard.writeText(`${shareText}\n${location.href}`).then(() => {
-                showToast('结局已复制到剪贴板', '📋');
-            }).catch(() => {
-                showToast('分享失败', '❌');
-            });
+            // 不支持 Web Share API，直接使用剪贴板
+            await fallbackToClipboard(fullText);
         }
     };
+
+    // 剪贴板降级方案
+    async function fallbackToClipboard(text) {
+        try {
+            // 尝试使用现代 Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                showToast('结局已复制到剪贴板！', '📋');
+            } else {
+                // 降级到传统方法（创建临时文本区域）
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showToast('结局已复制到剪贴板！', '📋');
+                    } else {
+                        showToast('复制失败，请手动复制', '❌');
+                    }
+                } catch (err) {
+                    console.error('复制失败:', err);
+                    showToast('复制失败，请手动复制', '❌');
+                } finally {
+                    document.body.removeChild(textArea);
+                }
+            }
+        } catch (error) {
+            console.error('剪贴板操作失败:', error);
+            showToast('分享失败，请手动复制', '❌');
+        }
+    }
 
     // 显示结局提示
     showToast(`结局：${endingInfo.title}`, endingInfo.icon);
