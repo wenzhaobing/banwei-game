@@ -1,355 +1,270 @@
-## 🎯 事件选项固定问题 - 多种解决方案
+# 事件选项系统设计文档
 
-你提出的「选项固定导致玩腻」是非常核心的问题。除了之前讨论的方案，还有以下几种低成本、高效果的解决方案。
-
----
-
-## 一、问题本质
-
-| 问题 | 表现 | 玩家感受 |
-|------|------|----------|
-| 选项固定 | 每个事件永远显示相同的3个选项 | 第二次玩就知道选哪个 |
-| 效果固定 | 同一个选项永远产生相同数值变化 | 没有惊喜感 |
-| 顺序固定 | 选项永远按相同顺序排列 | 可以无脑点同一个位置 |
+**日期**: 2026-04-17
+**更新**: 2026-04-22
+**状态**: 已实现
 
 ---
 
-## 二、解决方案汇总（从易到难）
+## 1. 项目背景
 
-| 方案 | 代码改动 | 效果 | 推荐度 |
-|------|----------|------|--------|
-| **方案1：选项随机排序** | 5行 | 选项位置变化 | ⭐⭐⭐⭐ |
-| **方案2：动态选项池** | 30行 | 选项内容变化 | ⭐⭐⭐⭐ |
+### 1.1 问题描述
+
+原游戏存在以下问题：
+- **选项固定**: 每个事件永远显示相同的3个选项，玩家第二次玩就知道选哪个
+- **效果固定**: 同一个选项永远产生相同数值变化，没有惊喜感
+- **顺序固定**: 选项永远按相同顺序排列，可以无脑点同一个位置
+
+### 1.2 目标
+
+实现每个事件有**专属选项池**（5-8个选项），每次随机抽取3个并打乱顺序，达到：
+- ✅ 选项位置每次随机变化
+- ✅ 选项内容每次不同（从专属池抽取）
+- ✅ 增加游戏重玩价值和惊喜感
+- ✅ 保持游戏平衡性和核心玩法
 
 ---
 
-## 三、方案1：选项随机排序（5行代码）
+## 2. 架构设计
 
-最简单，让选项每次出现在不同位置。
+### 2.1 文件结构
+
+```
+js/
+├── data/
+│   ├── events-data.js       (事件配置，含专属选项池)
+│   └── index.js             (导出更新)
+└── utils/
+    └── event-generator.js   (事件生成器)
+```
+
+### 2.2 模块职责
+
+| 模块 | 职责 | 依赖 |
+|------|------|------|
+| `events-data.js` | 定义30个事件，每个事件有专属 optionPool | 无 |
+| `event-generator.js` | 从选项池随机抽取选项并打乱顺序 | events-data.js |
+
+### 2.3 数据流
+
+```
+事件配置 (events-data.js)
+    ↓
+事件生成器 (event-generator.js)
+    ↓
+随机抽取3个选项 (从专属池)
+    ↓
+随机打乱顺序
+    ↓
+渲染到UI
+```
+
+---
+
+## 3. 数据结构设计
+
+### 3.1 事件配置数据结构
+
+**文件**: `js/data/events-data.js`
 
 ```javascript
-// 在 loadRandomEvent 中添加
-function loadRandomEvent() {
-    currentEvent = events[Math.floor(Math.random() * events.length)];
-    
-    // 随机打乱选项顺序（核心3行）
-    const shuffled = [...currentEvent.options];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    currentEvent.options = shuffled;
-    
-    // 正常渲染...
-}
+export const events = [
+    {
+        id: "boss_1",
+        title: "👔 老板来了",
+        desc: "老板突然出现在你身后...",
+        optionPool: [
+            { text: "假装写代码 💻", effects: { sanity: -20, stress: 10, money: 100 }, feedback: "老板满意地走了", tags: ["work"] },
+            { text: "回头对视 👀", effects: { sanity: -40, stress: 20, money: 0 }, feedback: "尴尬对视3秒，你赢了", tags: [] },
+            { text: "装死 😵", effects: { sanity: -60, stress: 40, money: -200 }, feedback: "老板叫了救护车...", tags: ["backstab"] },
+            { text: "递上一杯咖啡 ☕", effects: { sanity: 10, stress: -20, money: -40 }, feedback: "老板愣了一下", tags: ["social"] },
+            { text: "主动汇报工作 📊", effects: { sanity: -30, stress: 16, money: 120 }, feedback: "老板点头赞许", tags: ["work"] },
+            { text: "假装接电话 📞", effects: { sanity: 0, stress: -10, money: 0 }, feedback: "成功逃脱", tags: ["slack_off"] },
+            { text: "夸老板领带好看 👔", effects: { sanity: 10, stress: -16, money: 0 }, feedback: "老板心情变好", tags: ["social"] },
+            { text: "说身体不舒服 🤒", effects: { sanity: 0, stress: -20, money: 0 }, feedback: "老板让你早点回去", tags: [] }
+        ]
+    },
+    // ... 其他29个事件
+];
 ```
 
-**效果**：玩家无法靠「位置记忆」来选择，每次需要重新阅读。
+### 3.2 数值范围规范
+
+| 选项类型 | 理智 (sanity) | 压力 (stress) | 金钱 (money) |
+|----------|---------------|---------------|--------------|
+| 摸鱼型 | +10 ~ +40 | -50 ~ -10 | -200 ~ 0 |
+| 工作型 | -40 ~ -10 | +10 ~ +40 | +60 ~ +120 |
+| 社交型 | +10 ~ +30 | -40 ~ -10 | -160 ~ 0 |
+| 风险型 | -60 ~ +40 | -30 ~ +50 | -200 ~ +100 |
+| 中立型 | 0 | -20 ~ +10 | 0 |
+
+**说明**: 数值已按2倍调整，确保游戏节奏适中。
+
+### 3.3 事件分类
+
+| 分类 | 数量 | 示例 |
+|------|------|------|
+| 老板类 | 4 | 老板来了、老板突然发消息、老板生日、降本增效 |
+| 会议类 | 4 | 无聊会议、季度总结大会、线上会议、一对一谈话 |
+| 同事类 | 4 | 同事八卦、午饭时间、团建通知、背后说坏话 |
+| 工作类 | 4 | 系统崩溃、打印机坏了、咖啡机坏了、重要邮件 |
+| 摸鱼类 | 4 | 偷偷摸鱼、手机没电、午休时间、网购 |
+| 自我类 | 3 | 学习新技能、健身运动、心理咨询 |
+| 特殊类 | 3 | 抽奖、特殊遭遇、神秘事件 |
+| 突发类 | 4 | 客户投诉、HR约谈、加班、离职危机 |
 
 ---
 
-## 五、方案2：动态选项池（30行代码）
+## 4. 事件生成器设计
 
-每个事件从选项池中随机抽取选项，而不是固定选项。
+**文件**: `js/utils/event-generator.js`
+
+### 4.1 核心功能
 
 ```javascript
-// 选项池定义
-const OPTION_POOL = {
-    slack: [
-        { text: "刷短视频 😂", effects: { sanity: 5, stress: -10, money: 0 }, feedback: "太好笑了", tags: ["slack_off"] },
-        { text: "打游戏 🎮", effects: { sanity: 10, stress: -15, money: -50 }, feedback: "游戏输了", tags: ["slack_off"] },
-        { text: "看小说 📚", effects: { sanity: 8, stress: -8, money: 0 }, feedback: "剧情精彩", tags: ["slack_off"] },
-        { text: "刷淘宝 🛍️", effects: { sanity: 5, stress: -5, money: -30 }, feedback: "又下单了", tags: ["slack_off"] },
-        { text: "睡午觉 😴", effects: { sanity: 15, stress: -20, money: 0 }, feedback: "精神百倍", tags: ["slack_off"] }
-    ],
-    work: [
-        { text: "认真工作 💪", effects: { sanity: -10, stress: 10, money: 50 }, feedback: "老板满意", tags: ["work"] },
-        { text: "加班加点 🌙", effects: { sanity: -20, stress: 15, money: 100 }, feedback: "超额完成", tags: ["overtime"] },
-        { text: "主动汇报 📊", effects: { sanity: -5, stress: 5, money: 30 }, feedback: "刷存在感", tags: ["work"] }
-    ],
-    social: [
-        { text: "正常聊天 💬", effects: { sanity: 5, stress: -5, money: 0 }, feedback: "聊得开心", tags: ["social"] },
-        { text: "吐槽老板 😈", effects: { sanity: 15, stress: -10, money: 0 }, feedback: "太爽了", tags: ["slack_off"] }
-    ],
-    risk: [
-        { text: "主动背锅 🍳", effects: { sanity: -15, stress: 15, money: -20 }, feedback: "背锅侠", tags: ["backstab"] },
-        { text: "甩锅同事 🎯", effects: { sanity: -10, stress: 10, money: 0 }, feedback: "成功甩锅", tags: ["backstab"] }
-    ]
-};
-
-// 事件配置：定义每个事件从哪些池子抽选项
-const EVENT_CONFIG = {
-    "slack_1": { title: "📱 偷偷摸鱼", desc: "老板去开会了...", pools: ["slack", "slack", "work"] },
-    "boss_1": { title: "👔 老板来了", desc: "老板突然出现...", pools: ["work", "social", "risk"] },
-    "coffee_1": { title: "☕ 咖啡时间", desc: "去茶水间接咖啡...", pools: ["social", "slack", "work"] }
-};
-
-function generateDynamicEvent(eventId) {
-    const config = EVENT_CONFIG[eventId];
-    const options = [];
-    
-    for (const poolName of config.pools) {
-        const pool = OPTION_POOL[poolName];
-        const randomIndex = Math.floor(Math.random() * pool.length);
-        options.push({ ...pool[randomIndex] }); // 深拷贝
-    }
-    
-    return {
-        title: config.title,
-        desc: config.desc,
-        options: options
-    };
-}
-```
-
-**效果**：同一个事件「偷偷摸鱼」，可能遇到不同的选项组合。
-
----
-
-
-## 🎯 选项池类型汇总
-
-根据游戏的核心玩法，我建议设计 **7 种基础选项池类型**，覆盖职场中的各种场景。
-
----
-
-## 一、选项池类型总览
-
-| 类型ID | 名称 | 核心特征 | 标签 | 适用场景 |
-|--------|------|----------|------|----------|
-| `slack` | 摸鱼型 | 涨理智、降压力、可能花钱 | `slack_off` | 偷偷摸鱼、划水 |
-| `work` | 工作型 | 降理智、涨压力、赚钱 | `work`, `overtime` | 认真工作、加班 |
-| `social` | 社交型 | 中等理智、中等压力、不花钱 | `social` | 同事互动、聊天 |
-| `risk` | 风险型 | 高收益或高损失 | `backstab` | 背锅、甩锅 |
-| `self` | 自我提升型 | 长期收益 | `self_care` | 学习、休息 |
-| `random` | 随机型 | 效果随机 | `random` | 赌运气 |
-| `special` | 特殊型 | 触发特殊事件 | `special` | 隐藏选项 |
-
----
-
-## 二、各类型详细说明
-
-### 1. slack（摸鱼型）🐟
-
-**特点**：涨理智、降压力、可能花点小钱
-
-```json
-{
-    "slack": [
-        { "text": "刷短视频 😂", "effects": { "sanity": 5, "stress": -10, "money": 0 }, "tags": ["slack_off"] },
-        { "text": "打游戏 🎮", "effects": { "sanity": 10, "stress": -15, "money": -50 }, "tags": ["slack_off"] },
-        { "text": "看小说 📚", "effects": { "sanity": 8, "stress": -8, "money": 0 }, "tags": ["slack_off"] },
-        { "text": "刷淘宝 🛍️", "effects": { "sanity": 5, "stress": -5, "money": -30 }, "tags": ["slack_off"] },
-        { "text": "睡午觉 😴", "effects": { "sanity": 15, "stress": -20, "money": 0 }, "tags": ["slack_off"] }
-    ]
-}
-```
-
-**数值范围**：
-- 理智：+5 ~ +15
-- 压力：-20 ~ -5
-- 金钱：-50 ~ 0
-
----
-
-### 2. work（工作型）💪
-
-**特点**：降理智、涨压力、赚钱
-
-```json
-{
-    "work": [
-        { "text": "认真工作 💪", "effects": { "sanity": -10, "stress": 10, "money": 50 }, "tags": ["work"] },
-        { "text": "加班加点 🌙", "effects": { "sanity": -20, "stress": 15, "money": 100 }, "tags": ["overtime"] },
-        { "text": "主动汇报 📊", "effects": { "sanity": -5, "stress": 5, "money": 30 }, "tags": ["work"] },
-        { "text": "争取项目 🎯", "effects": { "sanity": -15, "stress": 12, "money": 80 }, "tags": ["work"] },
-        { "text": "写周报 📝", "effects": { "sanity": -8, "stress": 8, "money": 20 }, "tags": ["work"] }
-    ]
-}
-```
-
-**数值范围**：
-- 理智：-20 ~ -5
-- 压力：+5 ~ +15
-- 金钱：+20 ~ +100
-
----
-
-### 3. social（社交型）💬
-
-**特点**：中等理智、中等压力、不花钱
-
-```json
-{
-    "social": [
-        { "text": "正常聊天 💬", "effects": { "sanity": 5, "stress": -5, "money": 0 }, "tags": ["social"] },
-        { "text": "吐槽老板 😈", "effects": { "sanity": 15, "stress": -10, "money": 0 }, "tags": ["slack_off"] },
-        { "text": "分享八卦 🗣️", "effects": { "sanity": 10, "stress": -8, "money": 0 }, "tags": ["social"] },
-        { "text": "请客吃饭 🍜", "effects": { "sanity": 12, "stress": -12, "money": -80 }, "tags": ["social"] },
-        { "text": "参加团建 🎉", "effects": { "sanity": 8, "stress": -15, "money": -50 }, "tags": ["social"] }
-    ]
-}
-```
-
-**数值范围**：
-- 理智：+5 ~ +15
-- 压力：-15 ~ -5
-- 金钱：-80 ~ 0
-
----
-
-### 4. risk（风险型）🎲
-
-**特点**：高收益或高损失
-
-```json
-{
-    "risk": [
-        { "text": "主动背锅 🍳", "effects": { "sanity": -15, "stress": 15, "money": -20 }, "tags": ["backstab"] },
-        { "text": "甩锅同事 🎯", "effects": { "sanity": -10, "stress": 10, "money": 0 }, "tags": ["backstab"] },
-        { "text": "越级汇报 📢", "effects": { "sanity": -20, "stress": 20, "money": 150 }, "tags": ["risk"] },
-        { "text": "提出离职 📄", "effects": { "sanity": 20, "stress": -30, "money": 0 }, "tags": ["risk"] },
-        { "text": "投诉HR 📞", "effects": { "sanity": -25, "stress": 25, "money": -100 }, "tags": ["backstab"] }
-    ]
-}
-```
-
-**数值范围**：
-- 理智：-25 ~ +20
-- 压力：-30 ~ +25
-- 金钱：-100 ~ +150
-
----
-
-### 5. self（自我提升型）🌱
-
-**特点**：长期收益，短期可能消耗
-
-```json
-{
-    "self": [
-        { "text": "学习新技能 📖", "effects": { "sanity": 5, "stress": -5, "money": 0 }, "tags": ["self_care"] },
-        { "text": "冥想放松 🧘", "effects": { "sanity": 15, "stress": -15, "money": 0 }, "tags": ["self_care"] },
-        { "text": "健身锻炼 🏋️", "effects": { "sanity": 10, "stress": -10, "money": -30 }, "tags": ["self_care"] },
-        { "text": "早睡早起 😴", "effects": { "sanity": 8, "stress": -8, "money": 0 }, "tags": ["self_care"] },
-        { "text": "心理咨询 🧠", "effects": { "sanity": 20, "stress": -20, "money": -100 }, "tags": ["self_care"] }
-    ]
-}
-```
-
-**数值范围**：
-- 理智：+5 ~ +20
-- 压力：-20 ~ -5
-- 金钱：-100 ~ 0
-
----
-
-### 6. random（随机型）🎰
-
-**特点**：效果完全随机，增加惊喜感
-
-```json
-{
-    "random": [
-        { "text": "摸鱼抽奖 🎰", "effects": "random", "tags": ["random"] }
-    ]
-}
-
-// 代码中处理随机效果
-function getRandomEffects() {
-    const outcomes = [
-        { sanity: 20, stress: -20, money: 100, feedback: "欧皇附体！" },
-        { sanity: -20, stress: 20, money: -100, feedback: "非酋本酋..." },
-        { sanity: 5, stress: -5, money: 10, feedback: "小赚一笔" },
-        { sanity: -10, stress: 10, money: -50, feedback: "亏大了" }
-    ];
-    return outcomes[Math.floor(Math.random() * outcomes.length)];
-}
-```
-
----
-
-### 7. special（特殊型）✨
-
-**特点**：触发隐藏剧情或特殊效果
-
-```json
-{
-    "special": [
-        { "text": "召唤摸鱼之神 🐟✨", "effects": { "sanity": 30, "stress": -30, "money": 200 }, "tags": ["special"] },
-        { "text": "老板的秘药 💊", "effects": { "sanity": 50, "stress": -50, "money": -200 }, "tags": ["special"] },
-        { "text": "时间回溯 ⏰", "effects": { "sanity": 0, "stress": 0, "money": 0 }, "feedback": "回到上一轮", "tags": ["special"] }
-    ]
-}
-```
-
----
-
-## 三、事件与选项池映射示例
-
-```json
-{
-    "events": [
-        {
-            "id": "slack_1",
-            "title": "📱 偷偷摸鱼",
-            "desc": "老板去开会了，你掏出手机...",
-            "pools": ["slack", "slack", "work"]
-        },
-        {
-            "id": "boss_1", 
-            "title": "👔 老板来了",
-            "desc": "老板突然出现在你身后...",
-            "pools": ["work", "social", "risk"]
-        },
-        {
-            "id": "coffee_1",
-            "title": "☕ 咖啡时间",
-            "desc": "去茶水间接咖啡，遇到同事",
-            "pools": ["social", "self", "slack"]
-        },
-        {
-            "id": "meeting_1",
-            "title": "📊 无聊会议",
-            "desc": "会议室里，PPT放了半小时...",
-            "pools": ["slack", "random", "work"]
-        },
-        {
-            "id": "overtime_1",
-            "title": "🌙 深夜加班",
-            "desc": "又是加班到深夜...",
-            "pools": ["work", "work", "self"]
+export class EventGenerator {
+    /**
+     * 根据事件配置生成动态选项
+     * @param {Object} eventConfig - 事件配置 { id, title, desc, optionPool }
+     * @returns {Object} 完整的事件对象
+     */
+    static generateEvent(eventConfig) {
+        if (!eventConfig || !eventConfig.optionPool) {
+            return { id: 'error', title: '⚠️ 系统错误', desc: '事件加载失败', options: [] };
         }
-    ]
+
+        const selectedOptions = this.randomSelectOptions(eventConfig.optionPool, 3);
+
+        return {
+            id: eventConfig.id,
+            title: eventConfig.title,
+            desc: eventConfig.desc,
+            options: selectedOptions
+        };
+    }
+
+    /**
+     * 从选项池中随机抽取指定数量的不重复选项
+     * @param {Array} optionPool - 选项池数组
+     * @param {number} count - 需要抽取的选项数量
+     * @returns {Array} 抽取的选项数组
+     */
+    static randomSelectOptions(optionPool, count = 3) {
+        if (!optionPool || optionPool.length === 0) return [];
+        if (optionPool.length <= count) return [...optionPool];
+
+        const shuffled = [...optionPool];
+        for (let i = shuffled.length - 1; i > shuffled.length - count - 1; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        return shuffled.slice(-count);
+    }
+
+    /**
+     * 随机打乱选项顺序（Fisher-Yates 洗牌算法）
+     * @param {Array} options - 选项数组
+     * @returns {Array} 打乱后的选项数组
+     */
+    static shuffleOptions(options) {
+        if (!options || options.length === 0) return [];
+
+        const shuffled = [...options];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
 }
 ```
 
+### 4.2 核心算法
+
+**随机抽取 + 打乱顺序**:
+
+```javascript
+// 1. 从专属选项池随机抽取3个不重复选项
+const selectedOptions = EventGenerator.randomSelectOptions(event.optionPool, 3);
+
+// 2. 随机打乱选项顺序
+const shuffledOptions = EventGenerator.shuffleOptions(selectedOptions);
+```
+
+### 4.3 效果对比
+
+| 维度 | 旧方案（固定选项） | 新方案（专属池+随机） |
+|------|-------------------|---------------------|
+| 选项内容 | 每次相同（固定3个） | 每次不同（从5-8个中抽3个） |
+| 选项顺序 | 固定 | 随机打乱 |
+| 关联性 | ✅ 强 | ✅ 强（选项都是为该事件设计的） |
+| 多样性 | ❌ 差 | ✅ 好（C(8,3)=56种组合） |
+| 玩家感受 | 「又是这几个选项」 | 「咦，这次选项不一样」 |
+
+### 4.4 选项池大小与组合数
+
+| 事件类型 | 选项数 | 组合数 C(n,3) |
+|----------|--------|---------------|
+| 核心事件 | 6-8个 | C(6,3)=20 ~ C(8,3)=56 |
+| 普通事件 | 5-6个 | C(5,3)=10 ~ C(6,3)=20 |
+| 稀有事件 | 4-5个 | C(4,3)=4 ~ C(5,3)=10 |
+
 ---
 
-## 四、类型使用频率建议
+## 5. 错误处理策略
 
-| 类型 | 使用频率 | 说明 |
-|------|----------|------|
-| `slack` | 30% | 最常用，摸鱼是核心玩法 |
-| `work` | 25% | 常见，工作场景多 |
-| `social` | 20% | 中等，同事互动 |
-| `risk` | 10% | 较少，高风险高回报 |
-| `self` | 10% | 较少，自我提升 |
-| `random` | 3% | 稀有，惊喜效果 |
-| `special` | 2% | 极稀有，隐藏彩蛋 |
+| 错误情况 | 处理方式 | 日志级别 |
+|---------|---------|---------|
+| 事件配置无效 | 返回错误事件对象 | error |
+| 选项池为空 | 返回空数组 | error |
+| 选项池数量不足 | 返回所有可用选项 | warn |
+| 选项生成失败 | 使用空选项 | error |
 
 ---
 
-## 五、总结
+## 6. 性能指标
 
-| 类型 | 核心效果 | 推荐选项数 |
-|------|----------|------------|
-| `slack` | +💖 -😫 -💰 | 5-10个 |
-| `work` | -💖 +😫 +💰 | 5-10个 |
-| `social` | +💖 -😫 0💰 | 4-8个 |
-| `risk` | ±💖 ±😫 ±💰 | 4-6个 |
-| `self` | +💖 -😫 -💰 | 4-6个 |
-| `random` | 完全随机 | 2-4个 |
-| `special` | 特殊效果 | 2-3个 |
+| 指标 | 目标值 | 说明 |
+|------|--------|------|
+| 事件生成时间 | < 1ms | 包括随机抽取和打乱 |
+| 内存占用 | < 100KB | 30个事件的选项池数据 |
+| CPU占用 | 可忽略 | Fisher-Yates 算法 O(n) |
 
-这7种类型足够覆盖职场的各种场景，并且便于后续扩展！
+---
+
+## 7. 后续优化方向
+
+### 7.1 短期优化
+
+- 增加更多事件类型
+- 优化选项池数值平衡
+- 添加选项权重系统（稀有选项概率更低）
+
+### 7.2 中期优化
+
+- 实现特殊选项效果（如时间回溯、金钱加倍）
+- 添加选项组合效果（连续选择特定选项触发）
+- 实现事件链系统（某些选项触发后续事件）
+
+### 7.3 长期优化
+
+- 基于玩家行为动态调整选项池
+- 实现个性化选项推荐
+- 添加玩家自定义选项功能
+
+---
+
+## 8. 相关文档
+
+| 文档 | 说明 |
+|------|------|
+| `EVENT.md` | 事件选项问题原始需求 |
+| `fortunes-design.md` | 运势系统设计（版本2.0） |
+| `ending-design.md` | 动态结局系统设计 |
+| `mutiplier-design.md` | 乘数系统技术细节 |
+
+---
+
+**文档版本**: 2.0
+**最后更新**: 2026-04-22

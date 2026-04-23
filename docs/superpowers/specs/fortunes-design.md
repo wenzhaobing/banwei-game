@@ -1,6 +1,229 @@
-明白了！让我帮你梳理清楚**数据 → 界面 → 交互**的完整关系，并设计不同运势类型的弹窗样式，以及将小提示固定在选项卡片上。
+# 版本2.0
+## 🎯 简化版运势系统：基于周几 + 特殊节日
+
+去掉时间段微调，只保留**星期几**和**特殊节日**两个维度。
 
 ---
+
+## 一、完整实现代码
+
+```javascript
+// fortune.js - 基于周几和节日的运势系统
+
+class FortuneSystem {
+    constructor() {
+        this.currentFortune = null;
+        this.cachedDate = null;
+    }
+    
+    // 获取星期几名称
+    getWeekdayName(weekday) {
+        const names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        return names[weekday];
+    }
+    
+    // 检查特殊日期（节日/纪念日）
+    checkSpecialDate() {
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+        const key = `${month}-${day}`;
+        
+        const specialDates = {
+            // 法定节假日
+            '1-1': { text: "🎉 元旦快乐！新的一年，新的开始！", buff: "新年好运+50%", type: "good", icon: "🎉" },
+            '2-14': { text: "💕 情人节快乐！", buff: "社交收益+50%", type: "good", icon: "💕" },
+            '3-8': { text: "🌸 妇女节快乐！", buff: "所有收益+30%", type: "good", icon: "🌸" },
+            '5-1': { text: "🛠️ 劳动节快乐！今天不用劳动！", buff: "摸鱼收益+100%", type: "good", icon: "🛠️" },
+            '6-1': { text: "🍭 儿童节快乐！今天可以当个孩子！", buff: "所有收益+50%", type: "good", icon: "🍭" },
+            '9-10': { text: "📖 教师节快乐！", buff: "学习收益+50%", type: "good", icon: "📖" },
+            '10-1': { text: "🇨🇳 国庆节快乐！摸鱼七天乐！", buff: "所有收益+100%", type: "good", icon: "🇨🇳" },
+            '12-25': { text: "🎄 圣诞节快乐！", buff: "随机礼物+200", type: "good", icon: "🎄" },
+            '12-31': { text: "📅 年终总结，摸鱼一年辛苦了！", buff: "年终奖+500", type: "good", icon: "📅" },
+            
+            // 特殊日子
+            '4-1': { text: "🎭 愚人节！小心被整蛊！", debuff: "所有事件随机化", type: "bad", icon: "🎭" },
+            '11-11': { text: "🛒 双十一！剁手节！", buff: "购物快乐", debuff: "存款-100", type: "mixed", icon: "🛒" }
+        };
+        
+        return specialDates[key] || null;
+    }
+    
+    // 获取星期运势
+    getWeekdayFortune() {
+        const now = new Date();
+        const weekday = now.getDay();
+        const weekdayName = this.getWeekdayName(weekday);
+        
+        const fortunesByDay = {
+            '周一': [
+                { text: "黑色星期一，小心背锅", debuff: "背锅概率+50%", type: "bad", icon: "🍳" },
+                { text: "周一综合症，效率减半", debuff: "所有收益-20%", type: "bad", icon: "😫" },
+                { text: "新的一周，元气满满！", buff: "所有收益+10%", type: "good", icon: "💪" },
+                { text: "周一宜摸鱼，忌开会", buff: "摸鱼收益+30%", type: "good", icon: "🐟" },
+                { text: "周一正常开工", buff: "", debuff: "", type: "neutral", icon: "📅" }
+            ],
+            '周二': [
+                { text: "周二进入状态，效率提升", buff: "工作收益+20%", type: "good", icon: "⚡" },
+                { text: "周二综合征，不上不下", debuff: "压力+10%", type: "bad", icon: "😐" },
+                { text: "周二适合表现自己", buff: "金钱收益+20%", type: "good", icon: "💰" },
+                { text: "周二平淡如水", buff: "", debuff: "", type: "neutral", icon: "📅" }
+            ],
+            '周三': [
+                { text: "周三小周末，可以划水", buff: "摸鱼收益+30%", type: "good", icon: "🐟" },
+                { text: "一周过半，坚持住", buff: "压力减少+20%", type: "good", icon: "💪" },
+                { text: "周三容易犯困", debuff: "理智-10%", type: "bad", icon: "😴" },
+                { text: "周三不上不下", buff: "", debuff: "", type: "neutral", icon: "📅" }
+            ],
+            '周四': [
+                { text: "周四离周五不远了", buff: "压力减少+15%", type: "good", icon: "🎯" },
+                { text: "周四开会最多的一天", debuff: "会议压力+30%", type: "bad", icon: "📊" },
+                { text: "周四适合摸鱼等周五", buff: "摸鱼收益+20%", type: "good", icon: "🐟" },
+                { text: "周四正常推进", buff: "", debuff: "", type: "neutral", icon: "📅" }
+            ],
+            '周五': [
+                { text: "周五了，摸鱼无罪！", buff: "所有收益+30%", type: "good", icon: "🎉" },
+                { text: "周五下午，无心工作", buff: "摸鱼收益+50%", type: "good", icon: "🐟" },
+                { text: "黑色星期五，小心加班", debuff: "加班概率+30%", type: "bad", icon: "🌙" },
+                { text: "周五快乐！", buff: "压力-20", type: "good", icon: "😊" }
+            ],
+            '周六': [
+                { text: "周六还在加班？辛苦了", buff: "加班收益+50%", type: "good", icon: "💪" },
+                { text: "周六适合休息", buff: "压力自动-20", type: "good", icon: "😴" },
+                { text: "周六出去玩！", buff: "心情+50", type: "good", icon: "🎉" },
+                { text: "周六躺平日", buff: "", debuff: "", type: "neutral", icon: "📅" }
+            ],
+            '周日': [
+                { text: "周日晚上，周一恐惧症", debuff: "周一压力+30%", type: "bad", icon: "😨" },
+                { text: "周日适合调整心态", buff: "初始压力-10", type: "good", icon: "🧘" },
+                { text: "周日休息日", buff: "压力-10", type: "good", icon: "😴" },
+                { text: "周日充电日", buff: "", debuff: "", type: "neutral", icon: "📅" }
+            ]
+        };
+        
+        const dayFortunes = fortunesByDay[weekdayName];
+        if (!dayFortunes) return null;
+        
+        const randomIndex = Math.floor(Math.random() * dayFortunes.length);
+        const fortune = { ...dayFortunes[randomIndex] };
+        fortune.text = `【${weekdayName}】${fortune.text}`;
+        
+        return fortune;
+    }
+    
+    // 获取今日运势（主入口）
+    getDailyFortune() {
+        // 1. 检查缓存（同一天不重新生成）
+        const today = new Date().toDateString();
+        if (this.currentFortune && this.cachedDate === today) {
+            return this.currentFortune;
+        }
+        
+        // 2. 优先检查特殊日期（节日优先于星期）
+        const special = this.checkSpecialDate();
+        if (special) {
+            this.currentFortune = special;
+            this.cachedDate = today;
+            return special;
+        }
+        
+        // 3. 生成星期运势
+        const weekdayFortune = this.getWeekdayFortune();
+        if (weekdayFortune) {
+            this.currentFortune = weekdayFortune;
+            this.cachedDate = today;
+            return weekdayFortune;
+        }
+        
+        // 4. 默认运势（兜底）
+        const defaultFortune = {
+            text: "今天是个普通的一天",
+            buff: "",
+            debuff: "",
+            type: "neutral",
+            icon: "📅"
+        };
+        this.currentFortune = defaultFortune;
+        this.cachedDate = today;
+        return defaultFortune;
+    }
+    
+    // 获取运势显示内容
+    getFortuneDisplay() {
+        const fortune = this.getDailyFortune();
+        return {
+            text: fortune.text,
+            buff: fortune.buff || null,
+            debuff: fortune.debuff || null,
+            type: fortune.type || (fortune.buff ? 'good' : (fortune.debuff ? 'bad' : 'neutral')),
+            icon: fortune.icon || '🔮'
+        };
+    }
+    
+    // 手动刷新运势（用于测试）
+    refreshFortune() {
+        this.cachedDate = null;
+        return this.getDailyFortune();
+    }
+}
+
+// 导出单例
+export const fortuneSystem = new FortuneSystem();
+```
+
+---
+
+## 二、效果示例
+
+| 真实日期 | 显示效果 |
+|----------|----------|
+| 周一 | 【周一】黑色星期一，小心背锅 🍳 背锅概率+50% |
+| 周二 | 【周二】周二进入状态，效率提升 ⚡ 工作收益+20% |
+| 周三 | 【周三】周三小周末，可以划水 🐟 摸鱼收益+30% |
+| 周四 | 【周四】周四离周五不远了 🎯 压力减少+15% |
+| 周五 | 【周五】周五了，摸鱼无罪！🎉 所有收益+30% |
+| 周六 | 【周六】周六适合休息 😴 压力自动-20 |
+| 周日 | 【周日】周日晚上，周一恐惧症 😨 周一压力+30% |
+| 10月1日 | 🇨🇳 国庆节快乐！摸鱼七天乐！🎉 所有收益+100% |
+| 12月25日 | 🎄 圣诞节快乐！🎁 随机礼物+200 |
+
+---
+
+## 三、使用示例
+
+```javascript
+// 在游戏初始化时调用
+import { fortuneSystem } from './fortune.js';
+
+// 获取今日运势
+const fortune = fortuneSystem.getDailyFortune();
+console.log(fortune.text);      // 【周五】周五了，摸鱼无罪！
+console.log(fortune.buff);      // 所有收益+30%
+console.log(fortune.type);      // good
+
+// 获取显示内容
+const display = fortuneSystem.getFortuneDisplay();
+// 渲染到UI
+document.getElementById('fortuneText').textContent = display.text;
+document.getElementById('fortuneBuff').textContent = display.buff || '';
+```
+
+---
+
+## 四、总结
+
+| 特性 | 说明 |
+|------|------|
+| **周几运势** | 周一到周日各有3-5条专属运势 |
+| **特殊节日** | 元旦、国庆、圣诞等节日有彩蛋 |
+| **运势类型** | good（好运）、bad（坏运）、neutral（普通） |
+| **每日缓存** | 同一天运势不变，刷新页面不会改变 |
+| **扩展性** | 可轻松添加更多节日和运势文案 |
+
+---
+
+
+# 版本1.0
 
 ## 一、数据与界面的对应关系
 
@@ -496,3 +719,4 @@ const FORTUNE_TYPE = {
 | `fortune.multiplier` | 游戏逻辑 | 影响数值计算 |
 
 这样数据、界面、交互的关系就清晰了！
+

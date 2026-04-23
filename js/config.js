@@ -12,6 +12,9 @@ export const CONFIG = {
     INIT_STRESS: 20,
     INIT_MONEY: 600,
 
+    // 轮数上限
+    MAX_ROUNDS: 20,
+
     // 离线收益配置
     OFFLINE_HOUR_LIMIT: 8,
     OFFLINE_SANITY_PER_HOUR: 3,

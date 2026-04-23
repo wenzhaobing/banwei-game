@@ -1,3 +1,301 @@
+# 版本2.0
+## 🎯 20轮上限功能实现指南
+
+基于当前2倍数值（8-12轮平均结束），20轮上限作为「兜底机制」实现非常简单。
+
+---
+
+## 一、核心逻辑
+
+```
+每轮结束 → 轮数+1 → 检查是否达到20轮 → 是则强制结束
+                    ↓
+              同时检查结局 → 优先触发结局
+```
+
+---
+
+## 二、完整实现代码
+
+### 2.1 游戏状态管理
+
+```javascript
+// game-state.js
+export class GameState {
+    constructor() {
+        this.rounds = 0;           // 当前轮数
+        this.maxRounds = 20;       // 最大轮数
+        this.isGameOver = false;   // 游戏是否结束
+        this.endingType = null;    // 结局类型
+    }
+    
+    // 增加轮数
+    incrementRound() {
+        this.rounds++;
+    }
+    
+    // 检查是否达到上限
+    isMaxRoundsReached() {
+        return this.rounds >= this.maxRounds;
+    }
+    
+    // 结束游戏
+    endGame(endingType) {
+        this.isGameOver = true;
+        this.endingType = endingType;
+    }
+    
+    // 重置游戏
+    reset() {
+        this.rounds = 0;
+        this.isGameOver = false;
+        this.endingType = null;
+    }
+    
+    // 获取进度（用于UI）
+    getProgress() {
+        return {
+            current: this.rounds,
+            max: this.maxRounds,
+            percent: (this.rounds / this.maxRounds) * 100
+        };
+    }
+}
+
+export const gameState = new GameState();
+```
+
+---
+
+### 2.2 主游戏逻辑
+
+```javascript
+// main.js
+import { gameState } from './game-state.js';
+import { checkEnding, endings } from './endings.js';
+
+let currentEvent = null;
+
+// 初始化游戏
+function initGame() {
+    gameState.reset();
+    updateProgressUI();
+    loadRandomEvent();
+}
+
+// 每轮结束后调用
+function afterRound() {
+    // 1. 增加轮数
+    gameState.incrementRound();
+    updateProgressUI();
+    
+    // 2. 检查结局（优先级最高）
+    const ending = checkEnding();
+    if (ending) {
+        gameState.endGame(ending);
+        showEnding(ending);
+        return;
+    }
+    
+    // 3. 检查轮数上限（兜底）
+    if (gameState.isMaxRoundsReached()) {
+        gameState.endGame('time_limit');
+        showEnding('time_limit');
+        return;
+    }
+    
+    // 4. 继续下一轮
+    loadRandomEvent();
+}
+
+// 更新进度条UI
+function updateProgressUI() {
+    const progress = gameState.getProgress();
+    const progressBar = document.getElementById('roundProgress');
+    const roundText = document.getElementById('roundText');
+    
+    if (progressBar) {
+        progressBar.style.width = `${progress.percent}%`;
+    }
+    if (roundText) {
+        roundText.textContent = `第 ${progress.current} / ${progress.max} 轮`;
+    }
+}
+
+// 显示结局
+function showEnding(endingType) {
+    const ending = endings[endingType];
+    const modal = createEndingModal(ending, gameState.rounds);
+    document.body.appendChild(modal);
+}
+
+// 创建结局弹窗
+function createEndingModal(ending, rounds) {
+    const modal = document.createElement('div');
+    modal.className = 'ending-modal';
+    modal.innerHTML = `
+        <div class="ending-content">
+            <div class="ending-icon">${ending.icon}</div>
+            <div class="ending-title">${ending.title}</div>
+            <div class="ending-desc">${ending.desc}</div>
+            <div class="ending-stats">
+                📊 本轮共经历 ${rounds} 个事件
+            </div>
+            <div class="ending-buttons">
+                <button class="restart-btn" onclick="location.reload()">🔄 重新开始</button>
+            </div>
+        </div>
+    `;
+    return modal;
+}
+```
+
+---
+
+### 2.3 UI组件（进度条）
+
+```html
+<!-- 添加到游戏主界面顶部 -->
+<div class="round-progress-container">
+    <div class="round-info">
+        <span class="round-icon">📊</span>
+        <span class="round-text" id="roundText">第 0 / 20 轮</span>
+    </div>
+    <div class="round-progress-bar">
+        <div class="round-progress-fill" id="roundProgress" style="width: 0%"></div>
+    </div>
+</div>
+```
+
+```css
+/* 进度条样式 */
+.round-progress-container {
+    background: #fff5e6;
+    margin: 12px 20px;
+    padding: 10px 16px;
+    border-radius: 20px;
+    border: 1px solid #f0e2d0;
+}
+
+.round-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #5a4a3a;
+}
+
+.round-progress-bar {
+    height: 6px;
+    background: #e8dccc;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.round-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #7c9e6e, #9bbf8a);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+```
+
+---
+
+### 2.4 结局定义（新增兜底结局）
+
+```javascript
+// endings.js
+export const endings = {
+    // ... 原有结局
+    
+    // 新增：20轮自然结束
+    time_limit: {
+        name: "🎯 安全着陆",
+        icon: "🛬",
+        desc: "你平稳地度过了20轮，既没有暴毙，也没有成神。",
+        getDesc: (rounds, money) => {
+            return `你存活了 ${rounds} 轮，最终存款 ${money} 元。\n虽然不是最精彩的结局，但至少...你活下来了。`;
+        }
+    }
+};
+
+// 检查结局（优先级：数值结局 > 轮数上限）
+export function checkEnding(gameState, playerStats) {
+    // 1. 数值结局（优先级最高）
+    if (playerStats.sanity <= 0) return 'sanity_zero';
+    if (playerStats.money <= 0) return 'money_zero';
+    if (playerStats.stress >= 100) return 'stress_max';
+    if (playerStats.sanity >= 200) return 'sanity_max';
+    
+    // 2. 轮数上限（兜底）
+    if (gameState.isMaxRoundsReached()) return 'time_limit';
+    
+    return null;
+}
+```
+
+---
+
+## 三、完整流程图
+
+```
+开始游戏
+    ↓
+第1轮事件 → 选择选项 → 数值变化
+    ↓
+检查结局？ → 是 → 显示结局 → 结束
+    ↓ 否
+轮数+1，更新进度条
+    ↓
+轮数=20？ → 是 → 显示「安全着陆」结局 → 结束
+    ↓ 否
+继续下一轮
+```
+
+---
+
+## 四、预期效果
+
+| 场景 | 概率 | 结局 |
+|------|------|------|
+| 2-3轮触发结局 | ~10% | ICU/爆炸/吃土/成神 |
+| 4-12轮触发结局 | ~70% | 各种结局 |
+| 13-19轮触发结局 | ~10% | 各种结局 |
+| 20轮未触发 | ~10% | **安全着陆** |
+
+---
+
+## 五、完整文件结构
+
+```
+src/
+├── game-state.js      # 游戏状态管理（轮数计数）
+├── main.js            # 主游戏逻辑（集成轮数检查）
+├── endings.js         # 结局定义（含安全着陆）
+├── index.html         # UI（进度条）
+└── style.css          # 进度条样式
+```
+
+---
+
+## 六、总结
+
+| 组件 | 说明 |
+|------|------|
+| **轮数计数** | `gameState.rounds` |
+| **最大轮数** | 20轮 |
+| **进度条** | 实时显示当前进度 |
+| **结局优先级** | 数值结局 > 轮数上限 |
+| **兜底结局** | 「安全着陆」 |
+
+**核心代码量**：约50行，改动极小，立即可用！
+
+
+
+# 版本1.0
 ## 🎯 动态拼凑式结局系统
 
 这个方案**更灵活、更有重玩性**！同样是「吃土少年」结局，但每次的描述和总结都不同，玩家会想反复尝试看不同组合。

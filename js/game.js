@@ -17,6 +17,10 @@ export let gameState = {
     maxStress: CONFIG.MAX_STRESS,
     maxMoney: CONFIG.MAX_MONEY,
 
+    // 轮数计数
+    rounds: 0,
+    maxRounds: CONFIG.MAX_ROUNDS,
+
     // 历史记录
     maxStressEver: 0,
 
@@ -59,6 +63,28 @@ function clamp(value, min, max) {
 }
 
 /**
+ * 对效果数值应用倍率修正
+ * @param {object} effects - 原始效果 { sanity, stress, money }
+ * @param {object} multipliers - 倍率配置 { sanity, stress, money }
+ * @returns {object} 修正后的效果
+ */
+function applyMultiplier(effects, multipliers) {
+    const result = { ...effects };
+
+    if (multipliers.sanity !== undefined && multipliers.sanity !== 1.0) {
+        result.sanity = Math.floor(result.sanity * multipliers.sanity);
+    }
+    if (multipliers.stress !== undefined && multipliers.stress !== 1.0) {
+        result.stress = Math.floor(result.stress * multipliers.stress);
+    }
+    if (multipliers.money !== undefined && multipliers.money !== 1.0) {
+        result.money = Math.floor(result.money * multipliers.money);
+    }
+
+    return result;
+}
+
+/**
  * 应用运势修正到效果数值
  * @param {object} effects - 原始效果 { sanity, stress, money }
  * @param {string[]} tags - 事件标签
@@ -70,41 +96,44 @@ function applyModifier(effects, tags) {
 
     // 1. 随机化效果（优先级最高）
     if (mod.randomizeEffects) {
-        const randomFactor = () => 0.5 + Math.random() * 0.5;
-        result.sanity = Math.floor(result.sanity * randomFactor());
-        result.stress = Math.floor(result.stress * randomFactor());
-        result.money = Math.floor(result.money * randomFactor());
-        return result;
+        const randomFactor = 0.5 + Math.random() * 0.5;
+        return applyMultiplier(result, {
+            sanity: randomFactor,
+            stress: randomFactor,
+            money: randomFactor
+        });
     }
 
     // 2. 应用标签专属加成
     if (tags.includes('slack_off') && mod.slackBonus !== 1.0) {
-        result.sanity = Math.floor(result.sanity * mod.slackBonus);
-        result.stress = Math.floor(result.stress * mod.slackBonus);
-        result.money = Math.floor(result.money * mod.slackBonus);
+        Object.assign(result, applyMultiplier(result, {
+            sanity: mod.slackBonus,
+            stress: mod.slackBonus,
+            money: mod.slackBonus
+        }));
     }
 
     if (tags.includes('backstab') && mod.backstabPenalty !== 1.0) {
-        result.sanity = Math.floor(result.sanity * mod.backstabPenalty);
-        result.stress = Math.floor(result.stress * mod.backstabPenalty);
-        result.money = Math.floor(result.money * mod.backstabPenalty);
+        Object.assign(result, applyMultiplier(result, {
+            sanity: mod.backstabPenalty,
+            stress: mod.backstabPenalty,
+            money: mod.backstabPenalty
+        }));
     }
 
     if (tags.includes('coffee') && mod.coffeeBonus !== 1.0) {
-        result.sanity = Math.floor(result.sanity * mod.coffeeBonus);
-        result.stress = Math.floor(result.stress * mod.coffeeBonus);
+        Object.assign(result, applyMultiplier(result, {
+            sanity: mod.coffeeBonus,
+            stress: mod.coffeeBonus
+        }));
     }
 
     // 3. 应用全局倍率
-    if (mod.sanityMultiplier !== 1.0) {
-        result.sanity = Math.floor(result.sanity * mod.sanityMultiplier);
-    }
-    if (mod.stressMultiplier !== 1.0) {
-        result.stress = Math.floor(result.stress * mod.stressMultiplier);
-    }
-    if (mod.moneyMultiplier !== 1.0) {
-        result.money = Math.floor(result.money * mod.moneyMultiplier);
-    }
+    Object.assign(result, applyMultiplier(result, {
+        sanity: mod.sanityMultiplier,
+        stress: mod.stressMultiplier,
+        money: mod.moneyMultiplier
+    }));
 
     return result;
 }
@@ -160,14 +189,12 @@ function applyAchievementModifier(effects, tags) {
 
     // 摸鱼宗师奖励：摸鱼时所有收益+50%
     if (tags.includes('slack_off') && gameState.achievements.slack_master) {
-        result.sanity = Math.floor(result.sanity * 1.5);
-        result.stress = Math.floor(result.stress * 1.5);
-        result.money = Math.floor(result.money * 1.5);
+        Object.assign(result, applyMultiplier(result, { sanity: 1.5, stress: 1.5, money: 1.5 }));
     }
 
     // 背锅侠奖励：背锅时压力惩罚减少50%
     if (tags.includes('backstab') && gameState.achievements.backstab_king) {
-        result.stress = Math.floor(result.stress * 0.5);
+        Object.assign(result, applyMultiplier(result, { stress: 0.5 }));
     }
 
     // 加班战神奖励：加班获得额外金钱+20
@@ -194,6 +221,7 @@ function applyAchievementModifier(effects, tags) {
  * @returns {object|null} 结局对象 { type: string, isGood: boolean } 或 null
  */
 export function checkEnding() {
+    // 数值结局（优先级最高）
     if (gameState.sanity <= CONFIG.ENDING_SANITY_ZERO) {
         return { type: 'sanity_zero', isGood: false };
     }
@@ -206,6 +234,12 @@ export function checkEnding() {
     if (gameState.sanity >= CONFIG.ENDING_SANITY_MAX) {
         return { type: 'sanity_max', isGood: true };
     }
+    
+    // 轮数上限（兜底结局）
+    if (gameState.rounds > CONFIG.MAX_ROUNDS) {
+        return { type: 'rounds_limit', isGood: true };
+    }
+    
     return null;
 }
 
@@ -224,6 +258,8 @@ export function resetGameState() {
         maxSanity: CONFIG.MAX_SANITY,
         maxStress: CONFIG.MAX_STRESS,
         maxMoney: CONFIG.MAX_MONEY,
+        rounds: 1,
+        maxRounds: CONFIG.MAX_ROUNDS,
         maxStressEver: 0,
         achievements: { ...gameState.achievements },
         eventCount: {

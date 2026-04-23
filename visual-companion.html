@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小提示弹窗设计方案</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .design-section {
+            margin-bottom: 40px;
+        }
+
+        .design-section h2 {
+            margin-bottom: 20px;
+            color: #555;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .demo-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .demo-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            min-width: 300px;
+        }
+
+        .demo-item h3 {
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 模拟轮数和运势提示栏 */
+        .round-fortune-bar-demo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fef9f0;
+            padding: 10px 16px;
+            border-radius: 16px;
+            border: 1px solid #e0d5c8;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .round-display-demo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #5a4a3a;
+            font-weight: 500;
+        }
+
+        .fortune-trigger-demo {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+
+        /* 方案1：左侧弹出，三角形在右侧 */
+        .design-1 .fortune-tip-panel {
+            position: absolute;
+            top: 50%;
+            right: calc(100% + 12px);
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background: #7c9e6e;
+            color: white;
+            min-width: 250px;
+        }
+
+        .design-1 .fortune-tip-panel::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid #7c9e6e;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+
+        .design-1 .fortune-tip-text {
+            color: white;
+            font-weight: 500;
+        }
+
+        .design-1 .fortune-tip-detail {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* 方案2：左侧弹出，三角形在右侧（深色背景） */
+        .design-2 .fortune-tip-panel {
+            position: absolute;
+            top: 50%;
+            right: calc(100% + 12px);
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background: #5a7a4e;
+            color: white;
+            min-width: 250px;
+        }
+
+        .design-2 .fortune-tip-panel::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid #5a7a4e;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+
+        .design-2 .fortune-tip-text {
+            color: white;
+            font-weight: 500;
+        }
+
+        .design-2 .fortune-tip-detail {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* 方案3：左侧弹出，三角形在右侧（浅色背景） */
+        .design-3 .fortune-tip-panel {
+            position: absolute;
+            top: 50%;
+            right: calc(100% + 12px);
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background: #e8f5e1;
+            color: #2d5016;
+            min-width: 250px;
+            border: 1px solid #c5e1b5;
+        }
+
+        .design-3 .fortune-tip-panel::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid #e8f5e1;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+
+        .design-3 .fortune-tip-text {
+            color: #2d5016;
+            font-weight: 500;
+        }
+
+        .design-3 .fortune-tip-detail {
+            color: #4a7c31;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* 方案4：左侧弹出，三角形在右侧（中性色背景） */
+        .design-4 .fortune-tip-panel {
+            position: absolute;
+            top: 50%;
+            right: calc(100% + 12px);
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background: #fff;
+            color: #333;
+            min-width: 250px;
+            border: 1px solid #ddd;
+        }
+
+        .design-4 .fortune-tip-panel::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid #fff;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+
+        .design-4 .fortune-tip-text {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .design-4 .fortune-tip-detail {
+            color: #666;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* 坏运提示样式 */
+        .fortune-tip-bad-demo {
+            background: #e8a87c !important;
+            color: white !important;
+        }
+
+        .fortune-tip-bad-demo::after {
+            border-left-color: #e8a87c !important;
+        }
+
+        .fortune-tip-bad-demo .fortune-tip-text {
+            color: white !important;
+        }
+
+        .fortune-tip-bad-demo .fortune-tip-detail {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        /* 普通提示样式 */
+        .fortune-tip-neutral-demo {
+            background: #c7b198 !important;
+            color: white !important;
+        }
+
+        .fortune-tip-neutral-demo::after {
+            border-left-color: #c7b198 !important;
+        }
+
+        .fortune-tip-neutral-demo .fortune-tip-text {
+            color: white !important;
+        }
+
+        .fortune-tip-neutral-demo .fortune-tip-detail {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .fortune-tip-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .fortune-tip-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .fortune-tip-text {
+            line-height: 1.4;
+        }
+
+        .fortune-tip-detail {
+            margin-top: 4px;
+        }
+
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            color: #856404;
+        }
+
+        .note strong {
+            color: #d39e00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💡 小提示弹窗设计方案</h1>
+
+        <div class="note">
+            <strong>设计要求：</strong>
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li>弹出位置在💡图标左侧</li>
+                <li>中间对齐</li>
+                <li>弹窗右边有个三角形对着💡图标</li>
+                <li>弹窗背景色不设置透明度</li>
+                <li>平衡字体颜色和背景色</li>
+            </ul>
+        </div>
+
+        <div class="design-section">
+            <h2>方案对比</h2>
+            <div class="demo-container">
+                <div class="demo-item">
+                    <h3>方案1：中绿色背景（推荐）</h3>
+                    <div class="round-fortune-bar-demo design-1">
+                        <div class="round-display-demo">
+                            <span>📊</span>
+                            <span>0/20</span>
+                        </div>
+                        <div class="fortune-trigger-demo">💡</div>
+                        <div class="fortune-tip-panel">
+                            <div class="fortune-tip-icon">🍀</div>
+                            <div class="fortune-tip-content">
+                                <div class="fortune-tip-text">今日小提示：今天正常发挥就好。</div>
+                                <div class="fortune-tip-detail">无特殊效果</div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                        <strong>优点：</strong>背景色适中，对比度好，易于阅读<br>
+                        <strong>缺点：</strong>无
+                    </p>
+                </div>
+
+                <div class="demo-item">
+                    <h3>方案2：深绿色背景</h3>
+                    <div class="round-fortune-bar-demo design-2">
+                        <div class="round-display-demo">
+                            <span>📊</span>
+                            <span>0/20</span>
+                        </div>
+                        <div class="fortune-trigger-demo">💡</div>
+                        <div class="fortune-tip-panel">
+                            <div class="fortune-tip-icon">🍀</div>
+                            <div class="fortune-tip-content">
+                                <div class="fortune-tip-text">今日小提示：今天正常发挥就好。</div>
+                                <div class="fortune-tip-detail">无特殊效果</div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                        <strong>优点：</strong>深色背景更显眼<br>
+                        <strong>缺点：</strong>可能过于突出，影响整体视觉平衡
+                    </p>
+                </div>
+
+                <div class="demo-item">
+                    <h3>方案3：浅绿色背景</h3>
+                    <div class="round-fortune-bar-demo design-3">
+                        <div class="round-display-demo">
+                            <span>📊</span>
+                            <span>0/20</span>
+                        </div>
+                        <div class="fortune-trigger-demo">💡</div>
+                        <div class="fortune-tip-panel">
+                            <div class="fortune-tip-icon">🍀</div>
+                            <div class="fortune-tip-content">
+                                <div class="fortune-tip-text">今日小提示：今天正常发挥就好。</div>
+                                <div class="fortune-tip-detail">无特殊效果</div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                        <strong>优点：</strong>浅色背景柔和，不突兀<br>
+                        <strong>缺点：</strong>对比度较低，可能不够醒目
+                    </p>
+                </div>
+
+                <div class="demo-item">
+                    <h3>方案4：白色背景</h3>
+                    <div class="round-fortune-bar-demo design-4">
+                        <div class="round-display-demo">
+                            <span>📊</span>
+                            <span>0/20</span>
+                        </div>
+                        <div class="fortune-trigger-demo">💡</div>
+                        <div class="fortune-tip-panel">
+                            <div class="fortune-tip-icon">🍀</div>
+                            <div class="fortune-tip-content">
+                                <div class="fortune-tip-text">今日小提示：今天正常发挥就好。</div>
+                                <div class="fortune-tip-detail">无特殊效果</div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                        <strong>优点：</strong>简洁干净，通用性强<br>
+                        <strong>缺点：</strong>可能不够醒目，缺少特色
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="design-section">
+            <h2>不同运势类型的展示效果（以方案1为例）</h2>
+            <div class="demo-container">
+                <div class="demo-item">
+                    <h3>好运提示</h3>
+                    <div class="round-fortune-bar-demo design-1">
+                        <div class="round-display-demo">
+                            <span>📊</span>
+                            <span>0/20</span>
+                        </div>
+                        <div class="fortune-trigger-demo">💡</div>
+                        <div class="fortune-tip-panel">
+                            <div class="fortune-tip-icon">🍀</div>
+                            <div class="fortune-tip-content">
+                                <div class="fortune-tip-text">今日小提示：今天运气不错！</div>
+                                <div class="fortune-tip-detail">摸鱼收益+50%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-item">
+                    <h3>坏运提示</h3>
+                    <div class="round-fortune-bar-demo design-1">
+                        <div class="round-display-demo">
+                            <span>📊</span>
+                            <span>0/20</span>
+                        </div>
+                        <div class="fortune-trigger-demo">💡</div>
+                        <div class="fortune-tip-panel fortune-tip-bad-demo">
+                            <div class="fortune-tip-icon">🌊</div>
+                            <div class="fortune-tip-content">
+                                <div class="fortune-tip-text">今日小提示：水逆来了...</div>
+                                <div class="fortune-tip-detail">背锅惩罚+50%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="demo-item">
+                    <h3>普通提示</h3>
+                    <div class="round-fortune-bar-demo design-1">
+                        <div class="round-display-demo">
+                            <span>📊</span>
+                            <span>0/20</span>
+                        </div>
+                        <div class="fortune-trigger-demo">💡</div>
+                        <div class="fortune-tip-panel fortune-tip-neutral-demo">
+                            <div class="fortune-tip-icon">📅</div>
+                            <div class="fortune-tip-content">
+                                <div class="fortune-tip-text">今日小提示：今天正常发挥就好。</div>
+                                <div class="fortune-tip-detail">无特殊效果</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="note" style="background: #d4edda; border-color: #28a745; color: #155724;">
+            <strong>我的推荐：</strong>方案1（中绿色背景）
+            <p style="margin-top: 10px;">
+                方案1的背景色适中，既有足够的对比度，又不会过于突兀。三角形指示器清晰指向💡图标，整体视觉效果平衡。同时，这个方案可以很好地适配好运、坏运和普通提示三种类型。
+            </p>
+        </div>
+    </div>
+</body>
+</html>

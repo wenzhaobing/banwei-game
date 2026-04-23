@@ -52,58 +52,97 @@ body {
   overflow: hidden;
 }
 
-/* 运势小提示面板 */
+/* 运势小提示面板（浮动） */
 .fortune-tip-panel {
-  display: flex;
+  position: fixed;
+  z-index: 1000;
+  display: none;
+  flex-direction: row;
   align-items: flex-start;
   gap: 12px;
-  margin: 8px;
   padding: 12px 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 13px;
-  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 250px;
+  max-width: 300px;
+}
+
+.fortune-tip-panel::after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+}
+
+.fortune-tip-panel.show {
+  display: flex;
+  animation: slideInFromLeft 0.3s ease forwards;
+}
+
+.fortune-tip-panel.hide {
+  display: flex;
+  animation: slideOutToLeft 0.3s ease forwards;
 }
 
 /* 好运提示 */
 .fortune-tip-good {
-  background: rgba(124, 158, 110, 0.15);
+  background: var(--success-color);
   border-left: 4px solid var(--success-color);
 }
 
+.fortune-tip-good::after {
+  border-left-color: var(--success-color);
+}
+
 .fortune-tip-good .fortune-tip-text {
-  color: #5a7a4e;
+  color: #ffffff;
 }
 
 .fortune-tip-good .fortune-tip-detail {
-  color: #7c9e6e;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* 坏运提示 */
 .fortune-tip-bad {
-  background: rgba(232, 168, 124, 0.15);
+  background: var(--warning-color);
   border-left: 4px solid var(--warning-color);
 }
 
+.fortune-tip-bad::after {
+  border-left-color: var(--warning-color);
+}
+
 .fortune-tip-bad .fortune-tip-text {
-  color: #c97a4a;
+  color: #ffffff;
 }
 
 .fortune-tip-bad .fortune-tip-detail {
-  color: #d4956a;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* 普通提示 */
 .fortune-tip-neutral {
-  background: rgba(199, 177, 152, 0.15);
+  background: #c7b198;
   border-left: 4px solid #c7b198;
 }
 
+.fortune-tip-neutral::after {
+  border-left-color: #c7b198;
+}
+
 .fortune-tip-neutral .fortune-tip-text {
-  color: #8b6b4d;
+  color: #ffffff;
 }
 
 .fortune-tip-neutral .fortune-tip-detail {
-  color: #a08870;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .fortune-tip-icon {
@@ -196,6 +235,55 @@ body {
 
 .money-fill {
   background: var(--money-gradient);
+}
+
+/* ============ 轮数和运势提示栏 ============ */
+.round-fortune-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--panel-bg);
+  margin: 0 12px;
+  padding: 10px 16px;
+  position: relative;
+}
+
+.round-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.round-icon {
+  font-size: 16px;
+}
+
+.round-text {
+  font-weight: 600;
+}
+
+.fortune-trigger {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.fortune-trigger:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.fortune-trigger:active {
+  transform: scale(0.95);
+}
+
+.fortune-icon {
+  font-size: 18px;
+  display: block;
 }
 
 /* ============ 事件卡片 - 突出样式 ============ */
@@ -483,7 +571,6 @@ body {
 }
 
 .modal-body {
-  padding: 20px;
   overflow-y: auto;
   flex: 1;
 }
@@ -654,5 +741,28 @@ body {
 }
 
 .stats-summary .stat:nth-child(even) {
-  text-align: right;
+  text-align: left;
+}
+
+/* ============ 动画关键帧 ============ */
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-20px);
+  }
 }

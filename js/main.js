@@ -21,6 +21,100 @@ let lastEventId = null;
 let isGameOver = false;
 
 /**
+ * 更新轮数进度条
+ */
+function updateRoundProgress() {
+    const roundText = document.getElementById('roundText');
+    
+    const current = gameState.rounds || 1;
+    const max = gameState.maxRounds || 20;
+    
+    if (roundText) {
+        roundText.textContent = `${current}/${max}`;
+    }
+}
+
+/**
+ * 初始化运势提示交互
+ */
+function initFortuneTipInteraction() {
+    const fortuneTrigger = document.getElementById('fortuneTrigger');
+    const fortunePanel = document.getElementById('fortuneEffectPanel');
+    
+    if (!fortuneTrigger || !fortunePanel) return;
+    
+    let isOpen = false;
+    let autoCloseTimer = null;
+    
+    // 点击💡图标切换显示/隐藏
+    fortuneTrigger.addEventListener('click', () => {
+        if (isOpen) {
+            closeFortunePanel();
+        } else {
+            openFortunePanel();
+        }
+    });
+    
+    /**
+     * 打开运势提示面板
+     */
+    function openFortunePanel() {
+        isOpen = true;
+        
+        // 计算弹窗位置
+        const triggerRect = fortuneTrigger.getBoundingClientRect();
+        const panelWidth = 280; // 弹窗宽度
+        const gap = 12; // 间距
+        
+        // 先设置display为flex，让弹窗渲染
+        fortunePanel.style.display = 'flex';
+        
+        // 等待下一帧，确保弹窗已经渲染
+        requestAnimationFrame(() => {
+            // 设置位置
+            fortunePanel.style.top = `${triggerRect.top + triggerRect.height / 2}px`;
+            fortunePanel.style.left = `${triggerRect.left - panelWidth - gap}px`;
+            
+            fortunePanel.classList.remove('hide');
+            fortunePanel.classList.add('show');
+        });
+        
+        // 清除之前的定时器
+        if (autoCloseTimer) {
+            clearTimeout(autoCloseTimer);
+        }
+        
+        // 设置自动关闭（5秒后）
+        autoCloseTimer = setTimeout(() => {
+            closeFortunePanel();
+        }, 5000);
+    }
+    
+    /**
+     * 关闭运势提示面板
+     */
+    function closeFortunePanel() {
+        isOpen = false;
+        fortunePanel.classList.remove('show');
+        fortunePanel.classList.add('hide');
+        
+        // 清除定时器
+        if (autoCloseTimer) {
+            clearTimeout(autoCloseTimer);
+            autoCloseTimer = null;
+        }
+        
+        // 动画结束后隐藏元素
+        setTimeout(() => {
+            if (!isOpen) {
+                fortunePanel.style.display = 'none';
+                fortunePanel.classList.remove('hide');
+            }
+        }, 300);
+    }
+}
+
+/**
  * 统一设置弹窗关闭逻辑
  * @param {string} modalId - 弹窗元素ID
  * @param {string} closeBtnId - 关闭按钮元素ID（可选）
@@ -53,6 +147,14 @@ function setupModalClose(modalId, closeBtnId) {
 function applyEffects(opt, btnElement) {
     if (isGameOver) return;
 
+    // 禁用所有选项按钮，防止重复点击
+    const allButtons = document.querySelectorAll('.option-btn');
+    allButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.6';
+    });
+
     soundManager.click();
 
     const rect = btnElement.getBoundingClientRect();
@@ -64,6 +166,10 @@ function applyEffects(opt, btnElement) {
         effects.money || 0,
         tags
     );
+
+    // 增加轮数计数
+    gameState.rounds++;
+    updateRoundProgress();
 
     const changeEntries = Object.entries(changes).filter(([, value]) => value !== 0);
     changeEntries.forEach(([stat, value], index) => {
@@ -94,11 +200,12 @@ function applyEffects(opt, btnElement) {
         isGameOver = true;
         soundManager.ending(ending.isGood);
         // 设置结局上下文（游戏状态和轮数）
-        setEndingContext(gameState, gameState.eventCount?.total || 0);
+        setEndingContext(gameState, gameState.rounds);
         showEnding(ending.type, () => {
             resetGameState();
             isGameOver = false;
             updateStatsUI(gameState, false);
+            updateRoundProgress();
             loadRandomEvent();
             resetFeedback('人生重启，开始新的摸鱼之旅！');
             immediateSave();
@@ -163,6 +270,14 @@ function loadRandomEvent() {
 
     // 重置反馈区域
     resetFeedback('选择你的行动...');
+    
+    // 重新启用所有选项按钮
+    const allButtons = document.querySelectorAll('.option-btn');
+    allButtons.forEach(btn => {
+        btn.disabled = false;
+        btn.style.pointerEvents = 'auto';
+        btn.style.opacity = '1';
+    });
 }
 
 /**
@@ -187,7 +302,7 @@ function updateFortuneEffectDisplay() {
 
         // 更新样式类
         panel.className = `fortune-tip-panel fortune-tip-${tip.type}`;
-        panel.style.display = 'flex';
+        // 不在这里设置 display，让交互函数控制显示/隐藏
     } else {
         panel.style.display = 'none';
     }
@@ -247,6 +362,7 @@ function resetGame() {
         resetGameState();
         isGameOver = false;
         updateStatsUI(gameState, false);
+        updateRoundProgress();
         loadRandomEvent();
         resetFeedback('人生重启，开始新的摸鱼之旅！');
         immediateSave();
@@ -295,6 +411,13 @@ function init() {
         gameState.sanity = Math.max(0, gameState.sanity);
         gameState.stress = Math.max(0, gameState.stress);
         gameState.money = Math.max(0, gameState.money);
+        // 确保轮数存在
+        if (gameState.rounds === undefined) {
+            gameState.rounds = 1;
+        }
+        if (gameState.maxRounds === undefined) {
+            gameState.maxRounds = 20;
+        }
     }
 
     initDailyFortune();
@@ -306,6 +429,7 @@ function init() {
     }
 
     updateStatsUI(gameState, false);
+    updateRoundProgress();
     loadRandomEvent();
 
     showFortune();
@@ -315,6 +439,9 @@ function init() {
     document.getElementById('settingsBtn').onclick = showSettings;
 
     initSettings();
+    
+    // 初始化运势提示交互
+    initFortuneTipInteraction();
 
     setupModalClose('achievementModal', 'closeAchievementBtn');
     setupModalClose('settingsModal', 'closeSettingsBtn');

@@ -4,7 +4,6 @@
     flex-direction: column;
     align-items: center;
     gap: 16px;
-    padding: 20px;
 }
 
 /* 运势弹窗内容容器 */
@@ -70,8 +69,7 @@
 }
 
 .fortune-icon {
-    font-size: 64px;
-    animation: float 3s ease-in-out infinite;
+    font-size: 16px;
 }
 
 .fortune-type-title {

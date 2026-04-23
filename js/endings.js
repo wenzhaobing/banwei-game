@@ -197,12 +197,24 @@ export function showEnding(endingType, onRestart) {
         }
     };
 
+    // 检测是否在微信内置浏览器中
+    function isWechatBrowser() {
+        const ua = navigator.userAgent.toLowerCase();
+        return ua.includes('micromessenger');
+    }
+
     // 分享按钮
     document.getElementById('endingShareBtn').onclick = async () => {
         const shareText = `今天不想上班？来测测你的打工命运，看你能活几轮！我打出了【${endingInfo.title}】结局！\n${tags}\n${description}`;
         const fullText = `${shareText}\n${location.href}`;
         
-        // 尝试使用 Web Share API（主要在移动端支持）
+        // 微信内置浏览器：直接使用复制链接方式
+        if (isWechatBrowser()) {
+            await fallbackToClipboard(fullText, true);
+            return;
+        }
+        
+        // 非微信环境：尝试使用 Web Share API
         if (navigator.share) {
             try {
                 await navigator.share({
@@ -210,34 +222,32 @@ export function showEnding(endingType, onRestart) {
                     text: shareText,
                     url: location.href
                 });
-                // 分享成功或用户完成分享
                 showToast('分享成功！', '✅');
             } catch (error) {
-                // 区分用户取消和真正的错误
                 if (error.name === 'AbortError') {
-                    // 用户取消了分享，不显示错误
                     console.log('用户取消了分享');
                 } else {
-                    // 其他错误，降级到剪贴板
                     console.error('分享失败:', error);
                     await fallbackToClipboard(fullText);
                 }
             }
         } else {
-            // 不支持 Web Share API，直接使用剪贴板
             await fallbackToClipboard(fullText);
         }
     };
 
     // 剪贴板降级方案
-    async function fallbackToClipboard(text) {
+    async function fallbackToClipboard(text, isWechat = false) {
         try {
-            // 尝试使用现代 Clipboard API
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(text);
-                showToast('结局已复制到剪贴板！', '📋');
+                // 微信环境显示特殊提示
+                if (isWechat) {
+                    showToast('链接已复制！点击右上角 ⋯ 分享给好友', '📋');
+                } else {
+                    showToast('结局已复制到剪贴板！', '📋');
+                }
             } else {
-                // 降级到传统方法（创建临时文本区域）
                 const textArea = document.createElement('textarea');
                 textArea.value = text;
                 textArea.style.position = 'fixed';
@@ -250,7 +260,11 @@ export function showEnding(endingType, onRestart) {
                 try {
                     const successful = document.execCommand('copy');
                     if (successful) {
-                        showToast('结局已复制到剪贴板！', '📋');
+                        if (isWechat) {
+                            showToast('链接已复制！点击右上角 ⋯ 分享给好友', '📋');
+                        } else {
+                            showToast('结局已复制到剪贴板！', '📋');
+                        }
                     } else {
                         showToast('复制失败，请手动复制', '❌');
                     }
