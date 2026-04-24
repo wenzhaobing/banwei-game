@@ -18,7 +18,7 @@ export let gameState = {
     maxMoney: CONFIG.MAX_MONEY,
 
     // 轮数计数
-    rounds: 0,
+    rounds: 1,
     maxRounds: CONFIG.MAX_ROUNDS,
 
     // 历史记录
@@ -251,7 +251,9 @@ export function resetGameState() {
     // 检查是否满足情绪大师成就条件（重置时）
     const zenMasterUnlocked = gameState.maxStressEver < CONFIG.ZEN_MASTER_THRESHOLD;
 
-    gameState = {
+    // 使用Object.assign更新现有对象，而不是重新赋值
+    // 这样其他模块导入的gameState引用仍然有效
+    Object.assign(gameState, {
         sanity: CONFIG.INIT_SANITY,
         stress: zenMasterUnlocked ? CONFIG.INIT_STRESS - 20 : CONFIG.INIT_STRESS,
         money: CONFIG.INIT_MONEY,
@@ -279,6 +281,6 @@ export function resetGameState() {
             coffeeBonus: 1.0,
             randomizeEffects: false,
         }
-    };
+    });
     return gameState;
 }

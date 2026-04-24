@@ -167,10 +167,6 @@ function applyEffects(opt, btnElement) {
         tags
     );
 
-    // 增加轮数计数
-    gameState.rounds++;
-    updateRoundProgress();
-
     const changeEntries = Object.entries(changes).filter(([, value]) => value !== 0);
     changeEntries.forEach(([stat, value], index) => {
         const statType = stat;
@@ -195,20 +191,23 @@ function applyEffects(opt, btnElement) {
         soundManager.slack();
     }
 
+    // 检查数值结局（轮数上限结局在loadRandomEvent中处理）
     const ending = checkEnding();
-    if (ending) {
+    if (ending && ending.type !== 'rounds_limit') {
         isGameOver = true;
-        soundManager.ending(ending.isGood);
-        // 设置结局上下文（游戏状态和轮数）
+        // 先设置结局上下文（保存用户结束时的状态）
         setEndingContext(gameState, gameState.rounds);
+        // 立即重置游戏状态，避免刷新后继续游戏
+        resetGameState();
+        immediateSave();
+        // 显示结局弹窗
+        soundManager.ending(ending.isGood);
         showEnding(ending.type, () => {
-            resetGameState();
             isGameOver = false;
             updateStatsUI(gameState, false);
             updateRoundProgress();
-            loadRandomEvent();
+            loadRandomEvent(false); // 重置后加载新游戏，不增加轮数
             resetFeedback('人生重启，开始新的摸鱼之旅！');
-            immediateSave();
         });
     } else {
         setTimeout(loadRandomEvent, 1500);
@@ -217,9 +216,37 @@ function applyEffects(opt, btnElement) {
 
 /**
  * 加载随机事件（避免连续重复）
+ * @param {boolean} incrementRound - 是否增加轮数（默认true，初始化时传false）
  */
-function loadRandomEvent() {
+function loadRandomEvent(incrementRound = true) {
     if (isGameOver) return;
+
+    // 增加轮数计数（在加载下一个事件时更新，初始化时不增加）
+    if (incrementRound) {
+        gameState.rounds++;
+        updateRoundProgress();
+    }
+
+    // 检查是否达到轮数上限
+    if (gameState.rounds > gameState.maxRounds) {
+        // 触发轮数上限结局
+        isGameOver = true;
+        // 先设置结局上下文（保存用户结束时的状态）
+        setEndingContext(gameState, gameState.rounds);
+        // 立即重置游戏状态，避免刷新后继续游戏
+        resetGameState();
+        immediateSave();
+        // 显示结局弹窗
+        soundManager.ending(true);
+        showEnding('rounds_limit', () => {
+            isGameOver = false;
+            updateStatsUI(gameState, false);
+            updateRoundProgress();
+            loadRandomEvent(false); // 重置后加载新游戏，不增加轮数
+            resetFeedback('人生重启，开始新的摸鱼之旅！');
+        });
+        return;
+    }
 
     // 过滤掉上一次的事件，避免连续重复
     let availableEvents = lastEventId
@@ -363,7 +390,7 @@ function resetGame() {
         isGameOver = false;
         updateStatsUI(gameState, false);
         updateRoundProgress();
-        loadRandomEvent();
+        loadRandomEvent(false); // 重置后加载新游戏，不增加轮数
         resetFeedback('人生重启，开始新的摸鱼之旅！');
         immediateSave();
         showToast('游戏已重置', '🔄');
@@ -430,7 +457,7 @@ function init() {
 
     updateStatsUI(gameState, false);
     updateRoundProgress();
-    loadRandomEvent();
+    loadRandomEvent(false); // 初始化加载事件，不增加轮数
 
     showFortune();
     updateFortuneEffectDisplay();

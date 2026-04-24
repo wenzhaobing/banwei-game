@@ -291,6 +291,7 @@ export function showEnding(endingType, onRestart) {
  * @param {number} rounds - 总轮数
  */
 export function setEndingContext(state, rounds) {
-    window._gameStateForEnding = state;
+    // 深拷贝状态，避免后续修改影响结局显示
+    window._gameStateForEnding = { ...state };
     window._totalRounds = rounds;
 }

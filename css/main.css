@@ -195,7 +195,7 @@ body {
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: var(--text-primary);
   font-family: "Monaco", "Consolas", monospace;
@@ -587,7 +587,7 @@ body {
   font-size: 15px;
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  z-index: 2000;
+  z-index: 3500;
   transition: transform 0.4s ease;
   white-space: nowrap;
 }
@@ -723,8 +723,7 @@ body {
 .stats-summary {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.5);
   border-radius: 12px;
