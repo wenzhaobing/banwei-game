@@ -1,5 +1,153 @@
 # 版本更新记录
 
+## v2.0.0 (2026-05-06)
+
+### 🎮 核心玩法优化
+
+#### 1. 事件池洗牌机制（v2.0）
+- **实现事件池洗牌**：确保一轮游戏内事件不重复
+- **Fisher-Yates洗牌算法**：每次游戏开始时随机打乱事件顺序
+- **状态持久化**：事件池状态保存到 localStorage，刷新页面不丢失进度
+- **自动重置机制**：
+  - 游戏重开时重置事件池
+  - 触发结局时重置事件池
+  - 确保每次新游戏都是全新体验
+
+#### 2. 选项均衡系统（v3.0）
+
+**问题背景**：验证发现30个事件中仅3个合格，27个存在选项失衡问题
+
+**解决方案**：
+- **修复11个严重问题事件**：为全正面/全负面选项的事件添加对立选项
+- **实现判定标准函数**：
+  - `calculateOptionScore()` - 计算选项得分
+  - `getOptionType()` - 判定选项类型（正面/负面/中性）
+  - 权重公式：`理智 + 存款/5 - 压力`
+- **运行时动态生成均衡选项**：
+  - 确保至少1个正面选项
+  - 确保至少1个负面选项
+  - 第3个选项从剩余选项中随机抽取
+  - 最终随机打乱顺序
+
+**修复的事件列表**：
+
+| 事件ID | 事件名称 | 原问题 | 修复方案 |
+|--------|---------|--------|---------|
+| boss_4 | 📧 收到全员邮件 | 全是负面选项 | 添加正面选项：趁机要求加薪、开始存钱 |
+| meeting_1 | 📊 无聊会议 | 全是正面选项 | 添加负面选项：被点名回答、假装去厕所 |
+| meeting_2 | 📊 季度总结大会 | 全是正面选项 | 添加负面选项：被老板点名、偷偷睡觉被抓 |
+| meeting_3 | 💻 线上会议 | 全是正面选项 | 添加负面选项：被点名回答问题、麦克风没关被听到 |
+| meeting_4 | 👥 一对一谈话 | 全是正面选项 | 添加负面选项：被问住答不上来、表现太积极被怀疑 |
+| colleague_1 | 👥 同事八卦 | 全是正面选项 | 添加负面选项：被老板发现、打小报告 |
+| colleague_2 | 👥 同事八卦时间 | 全是正面选项 | 添加负面选项：被老板撞见、告密邀功 |
+| colleague_4 | 🎉 团建通知 | 全是正面选项 | 添加负面选项：被强制参加、爬山受伤 |
+| office_2 | 🔊 打印机又坏了 | 全是正面选项 | 添加负面选项：被老板催、弄坏打印机赔钱 |
+| office_3 | ☕ 咖啡机坏了 | 全是负面选项 | 添加正面选项：请同事喝咖啡、喝奶茶代替 |
+| system_1 | 💻 系统崩溃 | 全是负面选项 | 添加正面选项：趁机休息一下、文件自动恢复 |
+
+### 🐛 问题修复
+
+#### 1. 游戏状态持久化问题
+- **问题**：触发结局后刷新页面，轮数显示异常
+- **修复**：结局触发时正确保存和重置游戏状态
+- **修复**：重置游戏时使用 `Object.assign` 替代变量重赋值
+
+#### 2. Toast提示显示问题
+- **问题**：微信浏览器分享时Toast被结局弹窗遮挡
+- **修复**：Toast z-index 从 2000 提升到 3500
+
+#### 3. 事件效果残留问题
+- **问题**：下一个事件携带上一个事件的运势修正效果
+- **修复**：每次加载新事件时重置 `fortuneModifier`
+
+### 📁 文件变更
+
+#### 修改的文件
+- `js/game.js` - 事件池洗牌机制、状态重置逻辑
+- `js/main.js` - 轮数更新时机、事件加载逻辑
+- `js/utils/event-generator.js` - 选项判定和均衡生成逻辑
+- `js/data/events-data.js` - 11个事件的选项池数据修复
+- `js/endings.js` - 结局上下文深拷贝
+- `css/main.css` - Toast z-index 调整
+
+#### 新增的文件
+- `js/validate-events.js` - 事件验证工具
+- `validate-events.html` - 可视化验证界面
+
+### 🔧 技术细节
+
+#### 事件池洗牌实现
+```javascript
+// Fisher-Yates 洗牌算法
+static shuffleEventPool(events) {
+    const shuffled = [...events];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+// 游戏状态中保存事件池
+gameState = {
+    eventPool: [],      // 洗牌后的事件池
+    eventIndex: 0,      // 当前事件索引
+    rounds: 1,          // 当前轮数
+    // ...
+};
+```
+
+#### 选项类型判定
+```javascript
+// 计算选项得分（权重：存款100 ≈ 理智20 ≈ 压力20）
+static calculateOptionScore(option) {
+    const sanity = option.effects.sanity || 0;
+    const stress = option.effects.stress || 0;
+    const money = option.effects.money || 0;
+    return sanity + money / 5 - stress;
+}
+
+// 判定选项类型
+static getOptionType(option) {
+    const score = this.calculateOptionScore(option);
+    if (score >= 10) return 'positive';   // 明显正面
+    if (score <= -10) return 'negative';  // 明显负面
+    return 'neutral';                      // 中性/混合
+}
+```
+
+#### 均衡选项生成
+```javascript
+static generateBalancedOptions(optionPool, count = 3) {
+    // 1. 分类选项
+    const positivePool = optionPool.filter(opt => this.getOptionType(opt) === 'positive');
+    const negativePool = optionPool.filter(opt => this.getOptionType(opt) === 'negative');
+    
+    // 2. 确保至少1个正面 + 1个负面
+    const selected = [];
+    if (positivePool.length > 0) selected.push(randomPick(positivePool));
+    if (negativePool.length > 0) selected.push(randomPick(negativePool));
+    
+    // 3. 填充剩余选项
+    while (selected.length < count) {
+        selected.push(randomPick(optionPool, selected));
+    }
+    
+    // 4. 随机打乱顺序
+    return this.shuffleOptions(selected);
+}
+```
+
+### ✨ 改进点总结
+
+1. **游戏体验提升**：事件不重复，每局游戏都是新体验
+2. **策略性增强**：每个事件都有正负选项，玩家需要权衡
+3. **公平性保障**：运行时动态生成均衡选项，避免被迫选择
+4. **重玩价值提升**：多样化的事件组合和选项选择
+5. **代码可维护性**：验证工具帮助快速定位问题事件
+
+---
+
 ## v1.1.0 (2026-04-23)
 
 ### 🎨 UI/UX 优化
