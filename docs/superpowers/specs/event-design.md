@@ -2,9 +2,275 @@
 
 **日期**: 2026-04-17
 **更新**: 2026-04-22
-**状态**: 已实现
 
 ---
+
+## v3.0需求
+## 🎯 问题：选项全正面或全负面，玩家没得选
+
+这是一个非常核心的体验问题！当玩家面对三个选项时：
+
+| 情况 | 玩家感受 | 问题 |
+|------|----------|------|
+| **3个全正面** | 随便选哪个都行 | 策略性=0，无聊 |
+| **3个全负面** | 选哪个都亏 | 挫败感强，不想玩 |
+| **2正面1负面** | 避开坏的就行 | 策略性低 |
+| **2负面1正面** | 只能选那个好的 | 被迫选择 |
+
+**理想状态**：每个选项都有得有失，让玩家需要权衡。
+
+---
+
+## 一、解决方案：选项类型强制均衡
+
+### 核心规则
+**每个事件的3个选项，必须包含至少1个正面和1个负面，第3个可以是中性或混合。**
+
+```javascript
+// 选项类型强制配置
+const OPTION_TYPE_REQUIREMENT = {
+    minPositive: 1,    // 至少1个正面
+    minNegative: 1,    // 至少1个负面
+    total: 3           // 总共3个选项
+};
+```
+
+---
+
+## 二、实现方案
+
+### 方案：运行时动态生成选项（高级）
+
+从选项池中按类型抽取，保证每种类型至少一个：
+
+```javascript
+// 运行时选项生成器
+class OptionGenerator {
+    constructor(optionPools) {
+        this.pools = optionPools;
+    }
+    
+    // 生成均衡的3个选项
+    generateBalancedOptions() {
+        const options = [];
+        
+        // 1. 确保至少1个正面
+        const positivePool = this.pools.filter(opt => this.isPositive(opt));
+        options.push(this.randomFromPool(positivePool));
+        
+        // 2. 确保至少1个负面
+        const negativePool = this.pools.filter(opt => this.isNegative(opt));
+        options.push(this.randomFromPool(negativePool));
+        
+        // 3. 随机选第3个（可以是任何类型）
+        const allPool = this.pools;
+        options.push(this.randomFromPool(allPool));
+        
+        // 4. 打乱顺序
+        return this.shuffle(options);
+    }
+    
+    isPositive(opt) {
+        const score = (opt.effects.sanity || 0) + 
+                      (opt.effects.money || 0) - 
+                      (opt.effects.stress || 0);
+        return score > 10;
+    }
+    
+    isNegative(opt) {
+        const score = (opt.effects.sanity || 0) + 
+                      (opt.effects.money || 0) - 
+                      (opt.effects.stress || 0);
+        return score < -10;
+    }
+}
+```
+
+---
+
+## 三、正面/负面/中性的判定标准
+
+```javascript
+// 统一打分函数
+function calculateOptionScore(option) {
+    const sanity = option.effects.sanity || 0;
+    const stress = option.effects.stress || 0;
+    const money = option.effects.money || 0;
+    
+    // 权重：存款100 ≈ 理智20 ≈ 压力20
+    return sanity + money/5 - stress;
+}
+
+// 类型判定
+function getOptionType(option) {
+    const score = calculateOptionScore(option);
+    
+    if (score >= 10) return 'positive';   // 明显正面
+    if (score <= -10) return 'negative';  // 明显负面
+    return 'neutral';                      // 中性/混合
+}
+```
+
+**判定示例**：
+
+| 选项 | 效果 | 得分 | 类型 |
+|------|------|------|------|
+| 刷短视频 | +10💖 -20😫 | 10+4=14 | ✅ 正面 |
+| 认真工作 | -20💖 +20😫 +100💰 | -20-4+20=-4 | ⚠️ 中性 |
+| 装死 | -30💖 +20😫 -100💰 | -30-4-20=-54 | ❌ 负面 |
+
+---
+
+## 四、验证工具
+
+```javascript
+// 批量检查所有事件
+function validateAllEvents(events) {
+    const issues = [];
+    
+    events.forEach(event => {
+        const types = event.options.map(opt => getOptionType(opt));
+        const hasPositive = types.includes('positive');
+        const hasNegative = types.includes('negative');
+        
+        if (!hasPositive) {
+            issues.push(`${event.id}: 缺少正面选项`);
+        }
+        if (!hasNegative) {
+            issues.push(`${event.id}: 缺少负面选项`);
+        }
+    });
+    
+    if (issues.length > 0) {
+        console.warn('事件配置问题：', issues);
+        return false;
+    }
+    console.log('✅ 所有事件配置合格');
+    return true;
+}
+```
+
+---
+
+## 五、数据修正示例
+
+如果现有事件不符合要求，需要修正：
+
+```javascript
+// 修正前：全是负面
+{
+    id: "boss_bad",
+    options: [
+        { text: "装死", effects: { sanity: -30, stress: 20, money: -100 } },  // 负面
+        { text: "背锅", effects: { sanity: -20, stress: 25, money: -50 } },   // 负面
+        { text: "顶嘴", effects: { sanity: -25, stress: 30, money: -80 } }    // 负面
+    ]
+}
+
+// 修正后：添加正面选项
+{
+    id: "boss_fixed",
+    options: [
+        { text: "主动汇报", effects: { sanity: -5, stress: -10, money: 50 } },   // 正面 ✅
+        { text: "正常应对", effects: { sanity: 0, stress: 0, money: 0 } },       // 中性
+        { text: "装死", effects: { sanity: -30, stress: 20, money: -100 } }      // 负面
+    ]
+}
+```
+
+---
+
+## 六、总结
+
+| 问题 | 解决方案 |
+|------|----------|
+| 全正面选项 | 不需要解决（玩家乐意选）但策略性低 |
+| 全负面选项 | **必须修复**，添加正面/中性选项 |
+| 玩家没得选 | **强制每个事件至少1正1负** |
+
+**核心原则**：玩家应该面临「权衡」，而不是「被迫接受」或「随便选」。
+
+**实施建议**：
+1. 先用验证工具检查现有30个事件
+2. 修复不符合要求的事件
+3. 后续新增事件时，遵循「1正1负」规则
+
+## v2.0的需求
+
+### 核心规则（简化版）
+
+| 规则 | 说明 |
+|------|------|
+| **一轮内不重复** | 同一轮游戏中，每个事件最多出现1次 |
+| **触发结局重置** | 游戏结束（数值结局/20轮满）后，重置事件池 |
+| **重开重置** | 玩家手动点击「重开」，重置事件池 |
+
+### 实现逻辑
+
+```
+游戏开始/重开/结局触发
+        ↓
+   重置事件池（30个事件全部可用）
+        ↓
+   随机打乱顺序（洗牌）
+        ↓
+   依次抽取事件（每轮1个）
+        ↓
+   轮数达到20 或 触发结局 → 游戏结束
+        ↓
+   下一次开始 → 重新洗牌
+```
+
+### 删除的概念
+
+| 删除项 | 原因 |
+|------|------|
+| 事件池用尽 | 30 > 20，永远不会用尽 |
+| 完美通关结局 | 不需要，因为事件池永远有剩余 |
+
+---
+
+## 三、简化后的需求文档
+
+```markdown
+# 需求：一轮内事件不重复（事件池洗牌机制）
+
+## 1. 核心规则
+- 同一轮游戏（最多20轮）中，每个事件最多出现1次
+- 游戏结束后，事件池重置并重新洗牌
+- 手动重开后，事件池重置并重新洗牌
+
+## 2. 实现逻辑
+1. 游戏开始时，复制30个事件到待抽取池
+2. 随机打乱顺序
+3. 每轮从池顶取1个事件
+4. 取过的事件不再出现
+5. 游戏结束后，重复步骤1-4
+
+## 3. 重置时机
+- 触发数值结局（理智归零/满值、压力爆表、存款归零）
+- 20轮满「安全着陆」结局
+- 玩家点击「重开」按钮
+
+## 4. 验收标准
+- [ ] 同一轮内，事件ID不重复
+- [ ] 第二轮游戏的事件顺序与第一轮不同
+- [ ] 重开后事件顺序重新洗牌
+```
+
+---
+
+## 四、总结
+
+| 问题 | 答案 |
+|------|------|
+| 事件池会用尽吗？ | **不会**，30个事件 > 20轮 |
+| 需要完美结局吗？ | **不需要**，永远不会触发 |
+| 核心要做什么？ | 每轮开始时洗牌 + 游戏结束时重置 |
+
+**一句话需求**：每轮游戏开始前，把30个事件随机打乱，然后按顺序取20个使用，用完一轮后重新打乱。
+
+## v1.0 (已实现)
 
 ## 1. 项目背景
 

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事件验证工具</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #f0c987;
+            border-bottom: 2px solid #f0c987;
+            padding-bottom: 10px;
+        }
+        .summary {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .summary h2 {
+            color: #4ecca3;
+            margin-top: 0;
+        }
+        .stat {
+            display: inline-block;
+            margin-right: 30px;
+            padding: 10px 20px;
+            background: #0f3460;
+            border-radius: 4px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f0c987;
+        }
+        .event-card {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecca3;
+        }
+        .event-card.invalid {
+            border-left-color: #e94560;
+        }
+        .event-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #f0c987;
+            margin-bottom: 10px;
+        }
+        .event-stats {
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+        .option {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .option.positive {
+            background: #1e4620;
+            border-left: 3px solid #4ecca3;
+        }
+        .option.negative {
+            background: #4a1e1e;
+            border-left: 3px solid #e94560;
+        }
+        .option.neutral {
+            background: #3d3d1e;
+            border-left: 3px solid #f0c987;
+        }
+        .issues {
+            color: #e94560;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .valid-badge {
+            color: #4ecca3;
+            font-weight: bold;
+        }
+        #output {
+            white-space: pre-wrap;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 事件验证工具 - v3.0需求检查</h1>
+    
+    <div class="summary" id="summary">
+        <h2>正在加载...</h2>
+    </div>
+    
+    <div id="events"></div>
+    
+    <div id="output"></div>
+
+    <script type="module">
+        import { events } from './js/data/events-data.js';
+
+        /**
+         * 计算选项得分
+         */
+        function calculateOptionScore(option) {
+            const sanity = option.effects.sanity || 0;
+            const stress = option.effects.stress || 0;
+            const money = option.effects.money || 0;
+            return sanity + money / 5 - stress;
+        }
+
+        /**
+         * 获取选项类型
+         */
+        function getOptionType(option) {
+            const score = calculateOptionScore(option);
+            if (score >= 10) return 'positive';
+            if (score <= -10) return 'negative';
+            return 'neutral';
+        }
+
+        /**
+         * 验证单个事件
+         */
+        function validateEvent(event) {
+            const optionTypes = event.optionPool.map(opt => ({
+                text: opt.text,
+                type: getOptionType(opt),
+                score: calculateOptionScore(opt),
+                effects: opt.effects
+            }));
+            
+            const types = optionTypes.map(o => o.type);
+            const hasPositive = types.includes('positive');
+            const hasNegative = types.includes('negative');
+            const positiveCount = types.filter(t => t === 'positive').length;
+            const negativeCount = types.filter(t => t === 'negative').length;
+            const neutralCount = types.filter(t => t === 'neutral').length;
+            
+            const issues = [];
+            if (!hasPositive) issues.push('缺少正面选项');
+            if (!hasNegative) issues.push('缺少负面选项');
+            if (positiveCount === 3) issues.push('全是正面选项（策略性低）');
+            if (negativeCount === 3) issues.push('全是负面选项（体验差）');
+            
+            return {
+                id: event.id,
+                title: event.title,
+                isValid: hasPositive && hasNegative && positiveCount < 3 && negativeCount < 3,
+                issues,
+                stats: {
+                    positive: positiveCount,
+                    negative: negativeCount,
+                    neutral: neutralCount
+                },
+                options: optionTypes
+            };
+        }
+
+        /**
+         * 渲染验证结果
+         */
+        function renderResults() {
+            const results = events.map(validateEvent);
+            const validEvents = results.filter(r => r.isValid);
+            const invalidEvents = results.filter(r => !r.isValid);
+            
+            // 渲染汇总
+            const summaryHtml = `
+                <h2>📊 验证报告汇总</h2>
+                <div class="stat">
+                    <div>总事件数</div>
+                    <div class="stat-value">${results.length}</div>
+                </div>
+                <div class="stat">
+                    <div>合格事件</div>
+                    <div class="stat-value" style="color: #4ecca3">${validEvents.length}</div>
+                </div>
+                <div class="stat">
+                    <div>不合格事件</div>
+                    <div class="stat-value" style="color: #e94560">${invalidEvents.length}</div>
+                </div>
+                <div class="stat">
+                    <div>合格率</div>
+                    <div class="stat-value">${(validEvents.length / results.length * 100).toFixed(1)}%</div>
+                </div>
+            `;
+            document.getElementById('summary').innerHTML = summaryHtml;
+            
+            // 渲染事件列表
+            const eventsHtml = results.map(result => {
+                const optionsHtml = result.options.map(opt => {
+                    const typeIcon = opt.type === 'positive' ? '✅' : opt.type === 'negative' ? '❌' : '⚠️';
+                    return `
+                        <div class="option ${opt.type}">
+                            ${typeIcon} ${opt.text}<br>
+                            <small>效果: 💖${opt.effects.sanity || 0} 😫${opt.effects.stress || 0} 💰${opt.effects.money || 0} | 得分: ${opt.score.toFixed(1)}</small>
+                        </div>
+                    `;
+                }).join('');
+                
+                const statusHtml = result.isValid 
+                    ? '<span class="valid-badge">✅ 配置合格</span>'
+                    : `<div class="issues">⚠️ 问题: ${result.issues.join(', ')}</div>`;
+                
+                return `
+                    <div class="event-card ${result.isValid ? '' : 'invalid'}">
+                        <div class="event-title">${result.title} (${result.id})</div>
+                        <div class="event-stats">
+                            正面: ${result.stats.positive} | 负面: ${result.stats.negative} | 中性: ${result.stats.neutral}
+                        </div>
+                        ${optionsHtml}
+                        ${statusHtml}
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('events').innerHTML = eventsHtml;
+            
+            // 控制台输出
+            console.log('🔍 事件验证结果:');
+            console.log(`总事件数: ${results.length}`);
+            console.log(`合格事件: ${validEvents.length}`);
+            console.log(`不合格事件: ${invalidEvents.length}`);
+            if (invalidEvents.length > 0) {
+                console.log('\n❌ 不合格事件列表:');
+                invalidEvents.forEach(event => {
+                    console.log(`  - ${event.title} (${event.id}): ${event.issues.join(', ')}`);
+                });
+            }
+        }
+
+        // 执行验证
+        renderResults();
+    </script>
+</body>
+</html>

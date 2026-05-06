@@ -109,7 +109,7 @@ class DynamicEnding {
             ending.variantSummary
         ];
 
-        return parts.join('。') + '。';
+        return parts.join('。');
     }
 
     // 生成人格标签

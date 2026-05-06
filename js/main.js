@@ -1,7 +1,7 @@
 /**
  * 游戏主入口
  */
-import { gameState, updateStats, checkEnding, resetGameState } from './game.js';
+import { gameState, updateStats, checkEnding, resetGameState, shuffleEventPool } from './game.js';
 import { events } from './events.js';
 import { saveGame, loadGame, applyOfflineRewards, isFortuneAppliedToday, saveFortuneApplied, loadSettings, updateSetting, debouncedSave, immediateSave } from './storage.js';
 import { updateStatsUI, showNumberPop, setFeedback, resetFeedback, showToast, scheduleUIUpdate } from './ui.js';
@@ -13,9 +13,6 @@ import { EventGenerator } from './utils/event-generator.js';
 
 // 当前事件
 let currentEvent = null;
-
-// 上一次事件ID（用于避免连续重复）
-let lastEventId = null;
 
 // 游戏是否结束
 let isGameOver = false;
@@ -215,60 +212,65 @@ function applyEffects(opt, btnElement) {
 }
 
 /**
- * 加载随机事件（避免连续重复）
+ * 加载随机事件（事件池洗牌机制）
  * @param {boolean} incrementRound - 是否增加轮数（默认true，初始化时传false）
  */
 function loadRandomEvent(incrementRound = true) {
     if (isGameOver) return;
 
-    // 增加轮数计数（在加载下一个事件时更新，初始化时不增加）
+    // 事件池洗牌机制
+    // 如果事件池为空或索引超出范围，重新洗牌
+    if (!gameState.eventPool || gameState.eventPool.length === 0 || gameState.eventPoolIndex >= gameState.eventPool.length) {
+        gameState.eventPool = shuffleEventPool(events);
+        gameState.eventPoolIndex = 0;
+    }
+
+    // 用户点击选项后（incrementRound=true），先递增索引和轮数，再取事件
+    // 初始化或重置后（incrementRound=false），不递增，直接取当前事件
     if (incrementRound) {
+        // 检查是否即将达到轮数上限（递增前检查）
+        if (gameState.rounds >= gameState.maxRounds) {
+            // 触发轮数上限结局
+            isGameOver = true;
+            // 先设置结局上下文（保存用户结束时的状态，轮数保持当前值）
+            setEndingContext(gameState, gameState.rounds);
+            // 立即重置游戏状态，避免刷新后继续游戏
+            resetGameState();
+            immediateSave();
+            // 显示结局弹窗
+            soundManager.ending(true);
+            showEnding('rounds_limit', () => {
+                isGameOver = false;
+                updateStatsUI(gameState, false);
+                updateRoundProgress();
+                loadRandomEvent(false); // 重置后加载新游戏，不增加轮数
+                resetFeedback('人生重启，开始新的摸鱼之旅！');
+            });
+            return;
+        }
+        
+        gameState.eventPoolIndex++;
         gameState.rounds++;
         updateRoundProgress();
-    }
-
-    // 检查是否达到轮数上限
-    if (gameState.rounds > gameState.maxRounds) {
-        // 触发轮数上限结局
-        isGameOver = true;
-        // 先设置结局上下文（保存用户结束时的状态）
-        setEndingContext(gameState, gameState.rounds);
-        // 立即重置游戏状态，避免刷新后继续游戏
-        resetGameState();
+        // 立即保存，确保刷新后索引正确
         immediateSave();
-        // 显示结局弹窗
-        soundManager.ending(true);
-        showEnding('rounds_limit', () => {
-            isGameOver = false;
-            updateStatsUI(gameState, false);
-            updateRoundProgress();
-            loadRandomEvent(false); // 重置后加载新游戏，不增加轮数
-            resetFeedback('人生重启，开始新的摸鱼之旅！');
-        });
-        return;
+        
+        // 检查索引是否超出范围
+        if (gameState.eventPoolIndex >= gameState.eventPool.length) {
+            gameState.eventPool = shuffleEventPool(events);
+            gameState.eventPoolIndex = 0;
+        }
     }
 
-    // 过滤掉上一次的事件，避免连续重复
-    let availableEvents = lastEventId
-        ? events.filter(e => e.id !== lastEventId)
-        : events;
+    // 从事件池中按顺序取事件
+    const eventConfig = gameState.eventPool[gameState.eventPoolIndex];
+    console.log(`📍 当前事件池索引: ${gameState.eventPoolIndex + 1}/${gameState.eventPool.length}, 事件ID: ${eventConfig.id}`);
 
-    // 如果过滤后没有可用事件（理论上不会发生），则使用全部事件
-    if (availableEvents.length === 0) {
-        availableEvents = events;
-    }
-
-    // 随机选择一个事件配置
-    const eventConfig = availableEvents[Math.floor(Math.random() * availableEvents.length)];
-    
-    // 使用事件生成器动态生成完整事件（方案2）
+    // 使用事件生成器动态生成完整事件
     currentEvent = EventGenerator.generateEvent(eventConfig);
     
-    // 随机打乱选项顺序（方案1）
+    // 随机打乱选项顺序
     currentEvent.options = EventGenerator.shuffleOptions(currentEvent.options);
-
-    // 记录当前事件ID
-    lastEventId = currentEvent.id;
 
     // 更新事件描述
     document.getElementById('eventTitle').textContent = currentEvent.title;
@@ -444,6 +446,13 @@ function init() {
         }
         if (gameState.maxRounds === undefined) {
             gameState.maxRounds = 20;
+        }
+        // 确保事件池存在（兼容旧存档）
+        if (!gameState.eventPool) {
+            gameState.eventPool = [];
+        }
+        if (gameState.eventPoolIndex === undefined) {
+            gameState.eventPoolIndex = 0;
         }
     }
 

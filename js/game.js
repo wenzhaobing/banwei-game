@@ -48,7 +48,12 @@ export let gameState = {
         backstabPenalty: 1.0,
         coffeeBonus: 1.0,
         randomizeEffects: false,
-    }
+    },
+
+    // 事件池（洗牌后的事件列表）
+    eventPool: [],
+    // 事件池索引（当前抽取位置）
+    eventPoolIndex: 0
 };
 
 /**
@@ -60,6 +65,25 @@ export let gameState = {
  */
 function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * 洗牌事件池（Fisher-Yates算法）
+ * @param {Array} eventsList - 事件列表
+ * @returns {Array} 洗牌后的事件列表
+ */
+export function shuffleEventPool(eventsList) {
+    const shuffled = [...eventsList];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    
+    // 打印洗牌后的事件池
+    console.log('🎴 事件池已洗牌，事件顺序：');
+    console.log(shuffled.map((e, index) => `${index + 1}. ${e.id}`).join('\n'));
+    
+    return shuffled;
 }
 
 /**
@@ -248,6 +272,8 @@ export function checkEnding() {
  * @returns {object} 重置后的状态
  */
 export function resetGameState() {
+    console.log('🔄 游戏状态重置，事件池已清空');
+    
     // 检查是否满足情绪大师成就条件（重置时）
     const zenMasterUnlocked = gameState.maxStressEver < CONFIG.ZEN_MASTER_THRESHOLD;
 
@@ -280,7 +306,10 @@ export function resetGameState() {
             backstabPenalty: 1.0,
             coffeeBonus: 1.0,
             randomizeEffects: false,
-        }
+        },
+        // 重置事件池（清空，让loadRandomEvent重新洗牌）
+        eventPool: [],
+        eventPoolIndex: 0
     });
     return gameState;
 }

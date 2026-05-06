@@ -2,6 +2,32 @@
  * 游戏事件数据
  * 每个事件有专属选项池（5-8个选项），每次随机抽取3个不重复选项
  */
+
+// 批量检查所有事件
+function validateAllEvents(events) {
+    const issues = [];
+    
+    events.forEach(event => {
+        const types = event.options.map(opt => getOptionType(opt));
+        const hasPositive = types.includes('positive');
+        const hasNegative = types.includes('negative');
+        
+        if (!hasPositive) {
+            issues.push(`${event.id}: 缺少正面选项`);
+        }
+        if (!hasNegative) {
+            issues.push(`${event.id}: 缺少负面选项`);
+        }
+    });
+    
+    if (issues.length > 0) {
+        console.warn('事件配置问题：', issues);
+        return false;
+    }
+    console.log('✅ 所有事件配置合格');
+    return true;
+}
+
 export const events = [
     // ========== 1. 老板类（4个事件）==========
     {
@@ -53,7 +79,10 @@ export const events = [
             { text: "摸鱼等裁员 🐟", effects: { sanity: 20, stress: -40, money: 0 }, feedback: "开始每天准时下班", tags: ["slack_off"] },
             { text: "主动找老板表忠心 💪", effects: { sanity: -40, stress: 30, money: 60 }, feedback: "老板：'你是个好员工'", tags: ["work"] },
             { text: "和同事讨论 😨", effects: { sanity: -10, stress: 10, money: 0 }, feedback: "越聊越慌", tags: ["social"] },
-            { text: "假装没看见 🙈", effects: { sanity: 10, stress: -20, money: 0 }, feedback: "该干嘛干嘛", tags: ["slack_off"] }
+            { text: "假装没看见 🙈", effects: { sanity: 10, stress: -20, money: 0 }, feedback: "该干嘛干嘛", tags: ["slack_off"] },
+            { text: "趁机要求加薪 💰", effects: { sanity: 20, stress: -30, money: 200 }, feedback: "老板说考虑一下", tags: ["work"] },
+            { text: "开始存钱 💵", effects: { sanity: 10, stress: -10, money: 100 }, feedback: "未雨绸缪", tags: [] },
+            { text: "找HR打听消息 🕵️", effects: { sanity: -20, stress: 20, money: -50 }, feedback: "HR说'一切正常'", tags: ["social"] }
         ]
     },
 
@@ -68,7 +97,9 @@ export const events = [
             { text: "提问刁难 🤔", effects: { sanity: -30, stress: 20, money: 0 }, feedback: "气氛突然尴尬", tags: ["backstab"] },
             { text: "刷手机摸鱼 📱", effects: { sanity: 20, stress: -30, money: 0 }, feedback: "没人发现", tags: ["slack_off"] },
             { text: "主动发言 🎤", effects: { sanity: -10, stress: -10, money: 40 }, feedback: "老板记住了你", tags: ["work"] },
-            { text: "偷偷点外卖 🍔", effects: { sanity: 30, stress: -20, money: -80 }, feedback: "香味飘满会议室", tags: ["slack_off"] }
+            { text: "偷偷点外卖 🍔", effects: { sanity: 30, stress: -20, money: -80 }, feedback: "香味飘满会议室", tags: ["slack_off"] },
+            { text: "被点名回答 😰", effects: { sanity: -40, stress: 30, money: 0 }, feedback: "完全不知道在讲什么", tags: [] },
+            { text: "假装去厕所 🚽", effects: { sanity: 10, stress: -20, money: 0 }, feedback: "成功逃离半小时", tags: ["slack_off"] }
         ]
     },
     {
@@ -80,7 +111,10 @@ export const events = [
             { text: "偷偷点外卖 🍔", effects: { sanity: 30, stress: -20, money: -80 }, feedback: "全会议室都闻到了", tags: ["slack_off"] },
             { text: "举手提问刁难 🤔", effects: { sanity: -40, stress: 30, money: 0 }, feedback: "老板愣住3秒", tags: ["backstab"] },
             { text: "数PPT页数 📊", effects: { sanity: 0, stress: -10, money: 0 }, feedback: "已经100页了", tags: [] },
-            { text: "偷偷刷短视频 📱", effects: { sanity: 20, stress: -30, money: 0 }, feedback: "笑出了声", tags: ["slack_off"] }
+            { text: "偷偷刷短视频 📱", effects: { sanity: 20, stress: -30, money: 0 }, feedback: "笑出了声", tags: ["slack_off"] },
+            { text: "被老板点名 😰", effects: { sanity: -50, stress: 40, money: 0 }, feedback: "完全没听刚才讲什么", tags: [] },
+            { text: "认真听讲做笔记 📝", effects: { sanity: -30, stress: 20, money: 40 }, feedback: "老板表扬了你", tags: ["work"] },
+            { text: "偷偷睡觉被抓 😴", effects: { sanity: -60, stress: 50, money: -100 }, feedback: "老板当众批评", tags: [] }
         ]
     },
     {
@@ -92,7 +126,10 @@ export const events = [
             { text: "偷偷躺床上 🛏️", effects: { sanity: 40, stress: -40, money: 0 }, feedback: "差点打呼噜", tags: ["slack_off"] },
             { text: "不小心开了摄像头 😱", effects: { sanity: -60, stress: 50, money: -40 }, feedback: "大家看到你在吃螺蛳粉", tags: ["backstab"] },
             { text: "边开会边打游戏 🎮", effects: { sanity: 30, stress: -30, money: 0 }, feedback: "赢了游戏", tags: ["slack_off"] },
-            { text: "认真做笔记 ✍️", effects: { sanity: -20, stress: 10, money: 60 }, feedback: "老板点名表扬", tags: ["work"] }
+            { text: "认真做笔记 ✍️", effects: { sanity: -20, stress: 10, money: 60 }, feedback: "老板点名表扬", tags: ["work"] },
+            { text: "被点名回答问题 😰", effects: { sanity: -40, stress: 30, money: 0 }, feedback: "完全没听刚才讲什么", tags: [] },
+            { text: "麦克风没关被听到 🎤", effects: { sanity: -50, stress: 40, money: 0 }, feedback: "大家听到你在吐槽", tags: [] },
+            { text: "主动发言展示 💪", effects: { sanity: -30, stress: 20, money: 80 }, feedback: "老板很满意", tags: ["work"] }
         ]
     },
     {
@@ -104,7 +141,10 @@ export const events = [
             { text: "实话实说 💔", effects: { sanity: -20, stress: -30, money: -60 }, feedback: "你说'我想摸鱼到退休'", tags: [] },
             { text: "当场辞职 📄", effects: { sanity: 60, stress: -100, money: -400 }, feedback: "HR: '你认真的吗？'", tags: ["risk"] },
             { text: "要求加薪 💰", effects: { sanity: -30, stress: 30, money: 200 }, feedback: "HR说等通知", tags: ["work"] },
-            { text: "装傻充愣 🐑", effects: { sanity: 10, stress: -10, money: 0 }, feedback: "HR无奈", tags: [] }
+            { text: "装傻充愣 🐑", effects: { sanity: 10, stress: -10, money: 0 }, feedback: "HR无奈", tags: [] },
+            { text: "被问住答不上来 😰", effects: { sanity: -40, stress: 40, money: 0 }, feedback: "HR觉得你没规划", tags: [] },
+            { text: "表现太积极被怀疑 🤨", effects: { sanity: -30, stress: 20, money: 0 }, feedback: "HR觉得你在演戏", tags: [] },
+            { text: "认真准备PPT 📊", effects: { sanity: -20, stress: 10, money: 40 }, feedback: "HR印象深刻", tags: ["work"] }
         ]
     },
 
@@ -145,7 +185,10 @@ export const events = [
             { text: "默默走开 🚶", effects: { sanity: -10, stress: -10, money: 0 }, feedback: "装作什么都没听见", tags: [] },
             { text: "偷偷录音 🎙️", effects: { sanity: -40, stress: 20, money: -200 }, feedback: "被同事发现了", tags: ["backstab"] },
             { text: "加入聊天 💬", effects: { sanity: 16, stress: -16, money: 0 }, feedback: "聊得挺开心", tags: ["social"] },
-            { text: "请客吃饭 🍜", effects: { sanity: 24, stress: -24, money: -160 }, feedback: "关系更近了", tags: ["social"] }
+            { text: "请客吃饭 🍜", effects: { sanity: 24, stress: -24, money: -160 }, feedback: "关系更近了", tags: ["social"] },
+            { text: "被老板发现 😱", effects: { sanity: -50, stress: 40, money: -100 }, feedback: "老板说'工作时间不聊天'", tags: [] },
+            { text: "打小报告 📝", effects: { sanity: -30, stress: 30, money: 50 }, feedback: "老板记住了你", tags: ["backstab"] },
+            { text: "假装没听见 🙈", effects: { sanity: 0, stress: 10, money: 0 }, feedback: "同事觉得你高冷", tags: [] }
         ]
     },
     {
@@ -157,7 +200,10 @@ export const events = [
             { text: "默默走开 🚶", effects: { sanity: -10, stress: -10, money: 0 }, feedback: "装作什么都没听见", tags: [] },
             { text: "偷偷录音 🎙️", effects: { sanity: -40, stress: 20, money: -200 }, feedback: "被同事发现了", tags: ["backstab"] },
             { text: "提醒隔墙有耳 👂", effects: { sanity: 10, stress: -20, money: 0 }, feedback: "大家赶紧散开", tags: ["social"] },
-            { text: "加入讨论 💬", effects: { sanity: 20, stress: -20, money: 0 }, feedback: "聊得很投入", tags: ["social"] }
+            { text: "加入讨论 💬", effects: { sanity: 20, stress: -20, money: 0 }, feedback: "聊得很投入", tags: ["social"] },
+            { text: "被老板撞见 😱", effects: { sanity: -60, stress: 50, money: -200 }, feedback: "老板听到了所有内容", tags: [] },
+            { text: "告密邀功 📝", effects: { sanity: -20, stress: 30, money: 100 }, feedback: "老板表扬了你", tags: ["backstab"] },
+            { text: "假装没听见 🙈", effects: { sanity: 0, stress: 10, money: 0 }, feedback: "同事觉得你高冷", tags: [] }
         ]
     },
     {
@@ -181,7 +227,10 @@ export const events = [
             { text: "假装家里有事 🏠", effects: { sanity: 20, stress: -20, money: -100 }, feedback: "在家打游戏", tags: ["slack_off"] },
             { text: "建议改剧本杀 🎭", effects: { sanity: 30, stress: -30, money: -160 }, feedback: "大家玩嗨了", tags: ["social"] },
             { text: "请病假 🤒", effects: { sanity: 10, stress: -30, money: 0 }, feedback: "成功逃脱", tags: ["slack_off"] },
-            { text: "积极组织 🎉", effects: { sanity: -30, stress: 20, money: 100 }, feedback: "HR表扬了你", tags: ["work"] }
+            { text: "积极组织 🎉", effects: { sanity: -30, stress: 20, money: 100 }, feedback: "HR表扬了你", tags: ["work"] },
+            { text: "被强制参加 😤", effects: { sanity: -40, stress: 40, money: 0 }, feedback: "HR说'不去扣绩效'", tags: [] },
+            { text: "爬山受伤 🤕", effects: { sanity: -50, stress: 30, money: -200 }, feedback: "脚扭了", tags: [] },
+            { text: "团建表现太差 😓", effects: { sanity: -30, stress: 20, money: 0 }, feedback: "同事觉得你不合群", tags: [] }
         ]
     },
 
@@ -207,7 +256,10 @@ export const events = [
             { text: "找IT小哥 🛠️", effects: { sanity: 10, stress: -20, money: 0 }, feedback: "IT: '重启试试'", tags: ["work"] },
             { text: "用手抄 ✍️", effects: { sanity: -30, stress: 10, money: 0 }, feedback: "手酸了，字还丑", tags: ["overtime"] },
             { text: "拍照发朋友圈 📸", effects: { sanity: 20, stress: -20, money: 0 }, feedback: "网友都笑了", tags: ["slack_off"] },
-            { text: "换一台打印机 🖨️", effects: { sanity: 0, stress: -10, money: 0 }, feedback: "搞定", tags: [] }
+            { text: "换一台打印机 🖨️", effects: { sanity: 0, stress: -10, money: 0 }, feedback: "搞定", tags: [] },
+            { text: "被老板催 😰", effects: { sanity: -40, stress: 40, money: 0 }, feedback: "老板说'怎么还没好'", tags: [] },
+            { text: "弄坏打印机赔钱 💸", effects: { sanity: -30, stress: 20, money: -300 }, feedback: "行政让你赔偿", tags: [] },
+            { text: "紧急去打印店 🏃", effects: { sanity: -20, stress: 10, money: -50 }, feedback: "花了50块", tags: [] }
         ]
     },
     {
@@ -219,7 +271,10 @@ export const events = [
             { text: "叫外卖咖啡 🚚", effects: { sanity: 20, stress: -20, money: -80 }, feedback: "帮同事带了5杯", tags: ["coffee"] },
             { text: "建议喝白开水 💧", effects: { sanity: -40, stress: 30, money: 0 }, feedback: "被同事集体白眼", tags: [] },
             { text: "自己修 🔧", effects: { sanity: -20, stress: 10, money: 40 }, feedback: "居然修好了", tags: ["work"] },
-            { text: "去楼下买 ☕", effects: { sanity: 10, stress: -20, money: -50 }, feedback: "顺便摸鱼", tags: ["slack_off"] }
+            { text: "去楼下买 ☕", effects: { sanity: 10, stress: -20, money: -50 }, feedback: "顺便摸鱼", tags: ["slack_off"] },
+            { text: "趁机请同事喝咖啡 🎁", effects: { sanity: 30, stress: -30, money: -200 }, feedback: "同事关系变好了", tags: ["social"] },
+            { text: "喝奶茶代替 🧋", effects: { sanity: 20, stress: -20, money: -60 }, feedback: "发现奶茶更好喝", tags: [] },
+            { text: "戒咖啡一天 🚫", effects: { sanity: -30, stress: 20, money: 50 }, feedback: "省了钱，但头疼", tags: [] }
         ]
     },
     {
@@ -243,7 +298,10 @@ export const events = [
             { text: "找IT支援 🛠️", effects: { sanity: 10, stress: -30, money: 0 }, feedback: "IT恢复了文件", tags: ["work"] },
             { text: "趁机摸鱼 🐟", effects: { sanity: 30, stress: -30, money: 0 }, feedback: "反正也干不了活", tags: ["slack_off"] },
             { text: "骂骂咧咧 😤", effects: { sanity: -20, stress: 10, money: 0 }, feedback: "同事都听到了", tags: [] },
-            { text: "重写文件 ✍️", effects: { sanity: -40, stress: 30, money: 100 }, feedback: "写得比原来好", tags: ["overtime"] }
+            { text: "重写文件 ✍️", effects: { sanity: -40, stress: 30, money: 100 }, feedback: "写得比原来好", tags: ["overtime"] },
+            { text: "用备用电脑 💻", effects: { sanity: 0, stress: -10, money: 0 }, feedback: "幸好有备份", tags: [] },
+            { text: "趁机休息一下 ☕", effects: { sanity: 20, stress: -20, money: 0 }, feedback: "难得清闲", tags: ["slack_off"] },
+            { text: "文件自动恢复 ✨", effects: { sanity: 30, stress: -20, money: 0 }, feedback: "运气爆棚", tags: [] }
         ]
     },
 
